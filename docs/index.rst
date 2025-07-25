@@ -1,4 +1,4 @@
-Empire Distribution Infrastructure Documentation
+AWS Infrastructure Documentation
 ================================================
 
 This repository contains comprehensive technical documentation of the Distro Nation Environment for Empire Distribution's acquisition due diligence and integration planning.
