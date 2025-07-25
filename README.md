@@ -57,7 +57,3 @@ This repository contains technical documentation of the Distro Nation Environmen
 - `security/` - Security policies and procedures
 - `networking/` - Network topology and configuration
 - `runbooks/` - Operational procedures and troubleshooting guides
-
-## Getting Started
-
-Browse the directories above to find documentation relevant to your needs.
