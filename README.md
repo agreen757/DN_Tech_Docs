@@ -48,8 +48,36 @@ This repository contains technical documentation of the Distro Nation Environmen
 ## Repository Structure
 
 - `architecture/` - System architecture and design documents
+- `applications/` - Application-specific documentation (CRM, YouTube CMS)
+- `api/` - API specifications and integration documentation
 - `deployment/` - Deployment guides and configurations
 - `monitoring/` - Monitoring and alerting documentation
 - `security/` - Security policies and procedures
 - `networking/` - Network topology and configuration
 - `runbooks/` - Operational procedures and troubleshooting guides
+- `docs/` - Sphinx documentation configuration for Read the Docs
+
+## Documentation
+
+This repository is configured for [Read the Docs](https://readthedocs.org/) hosting with the following features:
+
+- **Sphinx Documentation**: Professional documentation rendering with search and navigation
+- **Markdown Support**: Full MyST parser support for existing Markdown files
+- **Multiple Formats**: HTML, PDF, and HTMLZip outputs available
+- **Interactive Features**: Copy buttons, responsive design, and enhanced styling
+
+### Building Documentation Locally
+
+To build the documentation locally:
+
+```bash
+cd docs/
+pip install -r requirements.txt
+sphinx-build -b html . _build/html
+```
+
+### Read the Docs Setup
+
+1. Connect your GitHub repository to Read the Docs
+2. The `.readthedocs.yaml` configuration will automatically build documentation
+3. All existing Markdown files are preserved and rendered through MyST parser

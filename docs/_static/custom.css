@@ -1,0 +1,53 @@
+/* Custom CSS for Empire Distribution Infrastructure Documentation */
+
+/* Improve diagram visibility */
+.document img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #e1e4e5;
+    border-radius: 4px;
+    margin: 1em 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Better code block styling */
+.highlight {
+    border-radius: 4px;
+    margin: 1em 0;
+}
+
+/* Improve table styling */
+.wy-table-responsive table td, 
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
+/* Better spacing for toctree */
+.toctree-wrapper ul {
+    margin-bottom: 1.5em;
+}
+
+/* Improve admonition styling */
+.admonition {
+    border-radius: 4px;
+}
+
+/* Better navigation styling */
+.wy-nav-side {
+    background: #2c3e50;
+}
+
+.wy-menu-vertical a {
+    color: #ecf0f1;
+}
+
+.wy-menu-vertical a:hover {
+    background-color: #34495e;
+}
+
+/* Improve search results */
+.search-summary {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 1em;
+}
