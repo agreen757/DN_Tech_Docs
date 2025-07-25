@@ -16,7 +16,7 @@ This document provides comprehensive specifications for all Distro Nation enviro
 Production Environment:
   AWS Account: <AWS_ACCOUNT_ID>
   Primary Region: <REGION>
-  Users: Live traffic (~estimated thousands of users)
+  Users: Live traffic 
   Availability: 99.9% target SLA
   
 Staging Environment:
