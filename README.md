@@ -2,10 +2,6 @@
 
 This repository contains technical documentation of the Distro Nation Environment for Empire Distribution's acquisition due diligence and integration planning.
 
-## Empire Distribution Requirements
-
-### Technical Documentation Package
-
 **System Architecture & Infrastructure:**
 - AWS and Firebase architecture diagrams with data flows
 - Resource inventory and configurations
