@@ -8,15 +8,31 @@ The Distro Nation infrastructure operates as a hybrid cloud architecture, levera
 ### Frontend Layer
 - **Web Applications**: Served through AWS CloudFront CDN
 - **Mobile Applications**: Firebase SDKs for real-time features
+- **CRM Application**: React TypeScript admin interface for email campaigns and user management
+  - **URL**: `https://crm.distro-nation.com`
+  - **Technology**: React 18, TypeScript, Material-UI
+  - **Authentication**: Firebase Auth + AWS Cognito
+  - **Deployment**: Firebase Hosting with CloudFront CDN
+- **YouTube CMS Metadata Tool**: Flask-based Python web application for content metadata management
+  - **Technology**: Python Flask, PostgreSQL, HTML/CSS/JavaScript
+  - **Authentication**: Environment-based configuration with YouTube API integration
+  - **Deployment**: Standalone deployment with potential Docker containerization
+  - **Integration**: Real-time WebSocket connections, AWS S3 report processing
 - **API Clients**: Access through AWS API Gateway
 
 ### Authentication & Authorization
 ```
-Mobile/Web Client
-├── Firebase Authentication (sign-in/sign-up)
-├── Custom JWT tokens
-└── AWS Lambda (token validation)
-    └── Aurora PostgreSQL (user data storage)
+Client Applications
+├── Mobile/Web Client
+│   ├── Firebase Authentication (sign-in/sign-up)
+│   ├── Custom JWT tokens
+│   └── AWS Lambda (token validation)
+│       └── Aurora PostgreSQL (user data storage)
+└── CRM Application
+    ├── Firebase Authentication (primary auth)
+    ├── AWS Cognito (admin/enhanced auth)
+    ├── API Key authentication (dn-api access)
+    └── Role-based access control (RBAC)
 ```
 
 ### API Layer
@@ -24,9 +40,18 @@ Mobile/Web Client
 Client Requests
 ├── Firebase Callable Functions (real-time operations)
 │   └── AWS Lambda triggers
-└── AWS API Gateway (RESTful operations)
-    ├── dn-api (core platform API)
-    └── distronationfmGeneralAccess (DistroFM API)
+├── AWS API Gateway (RESTful operations)
+│   ├── dn-api (core platform API)
+│   │   ├── /dn_users_list (CRM user list endpoint)
+│   │   ├── /send-mail (CRM email campaigns)
+│   │   └── /dn_payouts_fetch (financial data)
+│   └── distronationfmGeneralAccess (DistroFM API)
+└── Third-party API Integrations (via CRM)
+    ├── Mailgun (email delivery)
+    ├── OpenAI (content generation)
+    ├── YouTube API (analytics)
+    ├── Spotify API (streaming data)
+    └── SimilarWeb API (competitive intelligence)
 ```
 
 ### Compute Layer
@@ -82,12 +107,22 @@ Data Storage
 5. **Metadata** saved to Aurora PostgreSQL
 6. **Real-time update** sent via Firebase
 
+### Email Campaign Flow (CRM)
+1. **CRM Admin** creates email campaign via MailerTemplate component
+2. **CRM Application** fetches recipient list from dn-api (/dn_users_list)
+3. **Campaign data** submitted to dn-api (/send-mail) with authentication
+4. **Lambda function** processes campaign and integrates with Mailgun
+5. **Email delivery** handled by Mailgun service
+6. **Campaign tracking** data stored in Aurora and Firebase
+7. **Real-time analytics** updated in CRM dashboard
+
 ### Analytics Collection Flow
 1. **External APIs** (YouTube, Spotify, TikTok) send data
 2. **AWS Lambda** functions collect and process
 3. **Data** stored in Aurora and S3
 4. **Real-time updates** pushed via Firebase
 5. **Dashboards** updated in real-time
+6. **CRM Application** displays aggregated analytics via dashboard components
 
 ### Content Delivery Flow
 1. **User** requests content

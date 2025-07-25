@@ -102,8 +102,11 @@ paths:
 
   /dn_users_list:
     get:
-      summary: List Users
-      description: Retrieve list of users with optional filtering
+      summary: List Users for Email Campaigns
+      description: |
+        Retrieve list of users for email campaign targeting. Used by CRM application
+        to populate recipient lists for email campaigns. Returns user data with
+        email preferences and subscription status.
       operationId: listUsers
       parameters:
         - name: limit
@@ -113,19 +116,34 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
+          description: Maximum number of users to return
         - name: offset
           in: query
           schema:
             type: integer
             minimum: 0
             default: 0
+          description: Number of users to skip for pagination
         - name: filter
           in: query
           schema:
             type: string
+          description: Filter users by name, email, or subscription status
+        - name: subscriptionStatus
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending, unsubscribed]
+          description: Filter users by subscription status
+        - name: emailType
+          in: query
+          schema:
+            type: string
+            enum: [financial, newsletter, all]
+          description: Filter users by email type preferences
       responses:
         '200':
-          description: List of users
+          description: List of users retrieved successfully
           content:
             application/json:
               schema:
@@ -134,15 +152,73 @@ paths:
                   users:
                     type: array
                     items:
-                      $ref: '#/components/schemas/User'
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique user identifier
+                        email:
+                          type: string
+                          format: email
+                          description: User email address
+                        firstName:
+                          type: string
+                          description: User first name
+                        lastName:
+                          type: string
+                          description: User last name
+                        subscriptionStatus:
+                          type: string
+                          enum: [active, inactive, pending, unsubscribed]
+                          description: Current subscription status
+                        preferences:
+                          type: object
+                          properties:
+                            financialEmails:
+                              type: boolean
+                              description: Opt-in for financial email campaigns
+                            newsletterEmails:
+                              type: boolean
+                              description: Opt-in for newsletter campaigns
+                            marketingEmails:
+                              type: boolean
+                              description: Opt-in for marketing campaigns
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Account creation timestamp
+                        lastLoginAt:
+                          type: string
+                          format: date-time
+                          description: Last login timestamp
                   total:
                     type: integer
+                    description: Total number of users matching filter
                   limit:
                     type: integer
+                    description: Applied limit parameter
                   offset:
                     type: integer
+                    description: Applied offset parameter
+                  hasMore:
+                    type: boolean
+                    description: Whether more results are available
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       tags:
         - User Management
+        - CRM Integration
+        - Email Campaigns
     
     post:
       summary: Create User
@@ -169,6 +245,101 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       tags:
         - User Management
+
+  /send-mail:
+    post:
+      summary: Send Email Campaign
+      description: Send email campaigns via Mailgun integration for CRM application
+      operationId: sendEmailCampaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+                  description: Array of recipient email addresses
+                subject:
+                  type: string
+                  description: Email subject line
+                html:
+                  type: string
+                  description: HTML email content
+                text:
+                  type: string
+                  description: Plain text email content
+                from:
+                  type: string
+                  format: email
+                  description: Sender email address
+                replyTo:
+                  type: string
+                  format: email
+                  description: Reply-to email address
+                campaign:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Campaign name for tracking
+                    type:
+                      type: string
+                      enum: [financial, newsletter]
+                      description: Type of email campaign
+                    month:
+                      type: string
+                      description: Campaign month (for financial emails)
+                    year:
+                      type: string
+                      description: Campaign year (for financial emails)
+              required: [to, subject, html, from, campaign]
+      responses:
+        '200':
+          description: Email campaign sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  messageId:
+                    type: string
+                    description: Mailgun message ID
+                  recipientCount:
+                    type: integer
+                    description: Number of recipients
+                  estimatedDeliveryTime:
+                    type: string
+                    description: Estimated delivery time
+                  campaign:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [queued, sending, sent, failed]
+        '400':
+          description: Invalid email data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      tags:
+        - Email Campaigns
+        - CRM Integration
 
   /dn_payouts_fetch:
     get:
@@ -764,6 +935,37 @@ curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.<REGION>.amazonaws.com/stagi
 - Email sending via AWS SES
 - File storage operations via S3
 - Analytics data from external APIs (YouTube, Spotify)
+
+### YouTube CMS Integration Patterns
+
+The dn-api serves as a central integration point for YouTube CMS Metadata Management Tool operations:
+
+#### Video Metadata Synchronization
+- **Endpoint Integration**: `/send-mail` endpoint used for automated notifications about metadata sync status
+- **Report Processing**: S3 integration supports YouTube CMS report ingestion workflows
+- **User Management**: `/dn_users_list` provides user data for content ownership verification
+
+#### Content Management Workflows
+- **Asset Association**: API supports linking YouTube videos with internal asset management
+- **Monetization Tracking**: Endpoints provide data for revenue and monetization analysis
+- **Channel Management**: Integration with YouTube channel data and analytics
+
+#### Real-time Communication Support
+- **Email Notifications**: Automated alerts for sync failures, processing completion, and policy changes
+- **Campaign Integration**: YouTube CMS events trigger email campaigns via CRM application
+- **Audit Trail**: API calls logged for compliance and tracking purposes
+
+#### Data Flow Integration
+```
+YouTube CMS Tool → dn-api → Email Notifications
+YouTube CMS Tool → dn-api → User Verification
+YouTube CMS Tool → dn-api → Audit Logging
+```
+
+#### Authentication & Access Patterns
+- **Service Authentication**: YouTube CMS tool uses dedicated API key with appropriate permissions
+- **Rate Limiting**: Configured to handle bulk synchronization operations
+- **Error Handling**: Comprehensive error responses for YouTube API failures and sync issues
 
 ## Migration Considerations for Empire
 
