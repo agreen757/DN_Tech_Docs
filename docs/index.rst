@@ -8,8 +8,9 @@ This repository contains comprehensive technical documentation of the Distro Nat
    :caption: Architecture & Design
 
    ../architecture/unified-architecture.md
-   ../architecture/disaster-recovery.md
-   ../architecture/backup-strategies.md
+   ../architecture/technical-summary.md
+   ../architecture/aws-infrastructure-inventory.md
+   ../architecture/firebase-architecture.md
 
 .. toctree::
    :maxdepth: 2
@@ -36,38 +37,42 @@ This repository contains comprehensive technical documentation of the Distro Nat
    :maxdepth: 2
    :caption: Deployment & Operations
 
-   ../deployment/deployment-strategy.md
-   ../deployment/environment-configuration.md
-   ../deployment/ci-cd-pipeline.md
-   ../monitoring/monitoring-strategy.md
+   ../deployment/ci-cd.md
+   ../deployment/configuration.md
+   ../deployment/environments.md
+   ../deployment/rollback.md
    ../monitoring/alerting-configuration.md
-   ../monitoring/performance-metrics.md
+   ../monitoring/cloudwatch-metrics.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Security & Compliance
 
    ../security/security-policies.md
-   ../security/access-controls.md
-   ../security/compliance-certifications.md
-   ../security/vulnerability-management.md
-   ../security/incident-response.md
+   ../security/access-control-matrix.md
+   ../security/compliance-assessment.md
+   ../security/vulnerability-assessment.md
+   ../security/data-protection-policies.md
+   ../security/dn-api-security-remediation.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Networking & Infrastructure
 
-   ../networking/network-topology.md
-   ../networking/firewall-configuration.md
-   ../networking/load-balancer-setup.md
+   ../networking/vpc-topology.md
+   ../networking/security-groups.md
+   ../networking/load-balancers.md
+   ../networking/cdn-configuration.md
+   ../networking/dns-configuration.md
+   ../networking/connectivity-patterns.md
 
 .. toctree::
    :maxdepth: 2
-   :caption: Operations & Maintenance
+   :caption: Cost Management
 
-   ../runbooks/troubleshooting-guide.md
-   ../runbooks/maintenance-procedures.md
-   ../runbooks/emergency-procedures.md
+   ../costs/cost-analysis.md
+   ../costs/budget-management.md
+   ../costs/cost-optimization.md
 
 .. toctree::
    :maxdepth: 2
@@ -81,47 +86,47 @@ Application Architecture Diagrams
 CRM Application Architecture
 ----------------------------
 
-.. image:: ../applications/crm/diagrams/crm-architecture.png
+.. image:: _static/images/crm/crm-architecture.png
    :alt: CRM Architecture Overview
    :width: 100%
 
-.. image:: ../applications/crm/diagrams/crm-authentication-flow.png
+.. image:: _static/images/crm/authentication-security-flow.png
    :alt: CRM Authentication Flow
    :width: 100%
 
-.. image:: ../applications/crm/diagrams/crm-data-flow.png
+.. image:: _static/images/crm/data-flow-integrations.png
    :alt: CRM Data Flow
    :width: 100%
 
-.. image:: ../applications/crm/diagrams/crm-component-hierarchy.png
-   :alt: CRM Component Hierarchy
+.. image:: _static/images/crm/email-campaign-flow.png
+   :alt: CRM Email Campaign Flow
    :width: 100%
 
-.. image:: ../applications/crm/diagrams/crm-database-schema.png
-   :alt: CRM Database Schema
+.. image:: _static/images/crm/deployment-architecture.png
+   :alt: CRM Deployment Architecture
    :width: 100%
 
 YouTube CMS Tool Architecture
 -----------------------------
 
-.. image:: ../applications/youtube-cms/diagrams/youtube-cms-architecture.png
+.. image:: _static/images/youtube-cms/youtube-cms-architecture.png
    :alt: YouTube CMS Architecture Overview
    :width: 100%
 
-.. image:: ../applications/youtube-cms/diagrams/youtube-cms-data-flow.png
+.. image:: _static/images/youtube-cms/data-flow-processing.png
    :alt: YouTube CMS Data Flow
    :width: 100%
 
-.. image:: ../applications/youtube-cms/diagrams/youtube-cms-database-schema.png
+.. image:: _static/images/youtube-cms/database-schema.png
    :alt: YouTube CMS Database Schema
    :width: 100%
 
-.. image:: ../applications/youtube-cms/diagrams/youtube-cms-api-integration.png
+.. image:: _static/images/youtube-cms/api-integration-flow.png
    :alt: YouTube CMS API Integration
    :width: 100%
 
-.. image:: ../applications/youtube-cms/diagrams/youtube-cms-component-structure.png
-   :alt: YouTube CMS Component Structure
+.. image:: _static/images/youtube-cms/deployment-infrastructure.png
+   :alt: YouTube CMS Deployment Infrastructure
    :width: 100%
 
 Quick Start
