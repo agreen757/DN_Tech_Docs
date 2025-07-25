@@ -11,7 +11,7 @@ Total Buckets: 23+ buckets
 Storage Usage: ~709 GB across all buckets
 Monthly Cost: $16.61 (Standard storage)
 Key Buckets:
-  - distronation-audio: ~500GB (audio files)
+  - distronation-audio: ~500GB (reporting)
   - distro-nation-upload: ~200GB (user uploads)
   - distronationfm-profile-pictures: ~10GB (user profiles)
   - distronation-backup: Backup storage
