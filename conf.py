@@ -40,14 +40,23 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
-# Source file suffixes
-source_suffix = {
-    '.rst': None,
-    '.md': 'myst_parser',
-}
+# Source file suffixes  
+source_suffix = ['.rst', '.md']
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = [
+    '_build', 
+    'Thumbs.db', 
+    '.DS_Store',
+    'docs',  # Exclude the old docs directory
+    '.git',
+    '.github',
+    '.gitignore',
+    '*.pyc',
+    '.channels_cache.json',
+    '.users_cache.json',
+    '.opencode'
+]
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'
