@@ -7,78 +7,78 @@ This repository contains comprehensive technical documentation of the Distro Nat
    :maxdepth: 2
    :caption: Architecture & Design
 
-   ../architecture/unified-architecture.md
-   ../architecture/technical-summary.md
-   ../architecture/aws-infrastructure-inventory.md
-   ../architecture/firebase-architecture.md
+   architecture/unified-architecture.md
+   architecture/technical-summary.md
+   architecture/aws-infrastructure-inventory.md
+   architecture/firebase-architecture.md
 
 .. toctree::
    :maxdepth: 2
    :caption: API Documentation
 
-   ../api/dn-api-specification.md
+   api/dn-api-specification.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Applications
 
-   ../applications/crm/architecture-overview.md
-   ../applications/crm/component-catalog.md
-   ../applications/crm/api-integrations.md
-   ../applications/crm/development-setup.md
-   ../applications/crm/data-flow-patterns.md
-   ../applications/youtube-cms/architecture-overview.md
-   ../applications/youtube-cms/component-catalog.md
-   ../applications/youtube-cms/api-integrations.md
-   ../applications/youtube-cms/development-setup.md
-   ../applications/youtube-cms/data-flow-patterns.md
+   applications/crm/architecture-overview.md
+   applications/crm/component-catalog.md
+   applications/crm/api-integrations.md
+   applications/crm/development-setup.md
+   applications/crm/data-flow-patterns.md
+   applications/youtube-cms/architecture-overview.md
+   applications/youtube-cms/component-catalog.md
+   applications/youtube-cms/api-integrations.md
+   applications/youtube-cms/development-setup.md
+   applications/youtube-cms/data-flow-patterns.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Deployment & Operations
 
-   ../deployment/ci-cd.md
-   ../deployment/configuration.md
-   ../deployment/environments.md
-   ../deployment/rollback.md
-   ../monitoring/alerting-configuration.md
-   ../monitoring/cloudwatch-metrics.md
+   deployment/ci-cd.md
+   deployment/configuration.md
+   deployment/environments.md
+   deployment/rollback.md
+   monitoring/alerting-configuration.md
+   monitoring/cloudwatch-metrics.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Security & Compliance
 
-   ../security/security-policies.md
-   ../security/access-control-matrix.md
-   ../security/compliance-assessment.md
-   ../security/vulnerability-assessment.md
-   ../security/data-protection-policies.md
-   ../security/dn-api-security-remediation.md
+   security/security-policies.md
+   security/access-control-matrix.md
+   security/compliance-assessment.md
+   security/vulnerability-assessment.md
+   security/data-protection-policies.md
+   security/dn-api-security-remediation.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Networking & Infrastructure
 
-   ../networking/vpc-topology.md
-   ../networking/security-groups.md
-   ../networking/load-balancers.md
-   ../networking/cdn-configuration.md
-   ../networking/dns-configuration.md
-   ../networking/connectivity-patterns.md
+   networking/vpc-topology.md
+   networking/security-groups.md
+   networking/load-balancers.md
+   networking/cdn-configuration.md
+   networking/dns-configuration.md
+   networking/connectivity-patterns.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Cost Management
 
-   ../costs/cost-analysis.md
-   ../costs/budget-management.md
-   ../costs/cost-optimization.md
+   costs/cost-analysis.md
+   costs/budget-management.md
+   costs/cost-optimization.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Planning & Roadmap
 
-   ../technical-roadmap.md
+   technical-roadmap.md
 
 Application Architecture Diagrams
 =================================
@@ -164,5 +164,4 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
