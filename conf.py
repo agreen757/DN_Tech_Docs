@@ -6,9 +6,9 @@ import os
 import sys
 
 # -- Project information -----------------------------------------------------
-project = 'Empire Distribution Infrastructure Documentation'
-copyright = '2024, Empire Distribution'
-author = 'Empire Distribution Technical Team'
+project = 'Distro Nation Infrastructure Documentation'
+copyright = '2024, Distro Nation Technical Team'
+author = 'Distro Nation Technical Team'
 release = '1.0'
 
 # -- General configuration ---------------------------------------------------
@@ -93,8 +93,8 @@ latex_elements = {
 }
 
 latex_documents = [
-    ('index', 'empire-infrastructure-docs.tex', 'Empire Distribution Infrastructure Documentation',
-     'Empire Distribution Technical Team', 'manual'),
+    ('index', 'distro-nation-infrastructure-docs.tex', 'Distro Nation Infrastructure Documentation',
+     'Distro Nation Technical Team', 'manual'),
 ]
 
 # -- Intersphinx mapping -----------------------------------------------------
