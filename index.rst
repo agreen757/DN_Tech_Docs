@@ -43,6 +43,8 @@ This repository contains comprehensive technical documentation of the Distro Nat
    deployment/rollback.md
    monitoring/alerting-configuration.md
    monitoring/cloudwatch-metrics.md
+   operations/maintenance-tasks.md
+   operations/eventbridge-schedules.md
 
 .. toctree::
    :maxdepth: 2
