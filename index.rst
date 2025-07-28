@@ -1,7 +1,7 @@
-AWS Infrastructure Documentation
+Distro Nation Infrastructure Documentation
 ================================================
 
-This repository contains comprehensive technical documentation of the Distro Nation Environment for Empire Distribution's acquisition due diligence and integration planning.
+This repository contains comprehensive technical documentation of the Distro Nation infrastructure environment and technical roadmap.
 
 .. toctree::
    :maxdepth: 2
@@ -158,7 +158,7 @@ Contact Information
 For questions about this documentation or the systems it describes, please contact:
 
 * **Technical Lead**: Adrian Green
-* **Repository**: https://github.com/agreen757/empire-distribution-docs
+* **Repository**: https://github.com/agreen757/distro-nation-infrastructure-docs
 
 Indices and tables
 ==================
