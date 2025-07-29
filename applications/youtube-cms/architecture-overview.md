@@ -46,6 +46,9 @@ The application follows a traditional three-tier architecture pattern with moder
 - **Alembic**: Database schema versioning
 - **Flask-SocketIO**: Real-time bidirectional communication
 - **Gunicorn**: WSGI HTTP Server for production deployment
+- **Node.js 18.x**: Containerized batch processing runtime
+- **Amazon ECS**: Container orchestration platform
+- **Amazon EventBridge**: Event-driven workflow coordination
 
 #### Database & Storage
 - **PostgreSQL 13+**: Primary database with advanced features
@@ -216,6 +219,13 @@ Web Interface → API Request → Database Query → Response Processing → UI 
 - Monitoring and logging integration
 - Automated backup procedures
 
+### Containerized Processing Environment
+- **Amazon ECS**: Fargate-based container orchestration
+- **Custom ID Cleanup Workflow**: Event-driven batch processing
+- **Container Images**: Stored in Amazon ECR
+- **Resource Allocation**: Configurable CPU and memory per task
+- **Network Integration**: VPC-based secure communication
+
 ## Integration Points
 
 ### YouTube Content Management System
@@ -228,12 +238,16 @@ Web Interface → API Request → Database Query → Response Processing → UI 
 - S3 for report storage and processing
 - IAM for access control
 - CloudWatch for monitoring (future enhancement)
+- **Amazon ECS**: Containerized custom ID cleanup processing
+- **Amazon EventBridge**: Event-driven workflow orchestration
+- **Amazon ECR**: Container image storage and management
 
 ### Internal Distro Nation Systems
 - Integration with existing content workflows
 - Shared authentication systems
 - Cross-system data consistency
 - Audit trail maintenance
+- **ECS-based Custom ID Processing**: Automated channel backfill and CMS cleanup workflow
 
 ## Future Enhancement Opportunities
 
