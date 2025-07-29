@@ -719,7 +719,355 @@ def process_bulk_batch(video_ids, update_data):
     return batch_results
 ```
 
-### 5. Data Consistency and Integrity Patterns
+### 5. ECS-based Custom ID Cleanup Flow
+
+The system implements a containerized batch processing workflow for large-scale custom ID cleanup operations using Amazon ECS and EventBridge.
+
+#### Workflow Architecture
+
+**Event-Driven Two-Stage Process**:
+```
+channelbackfill ECS Task → EventBridge Event → cmsCustomidCleanup ECS Task
+```
+
+#### Stage 1: Channel Data Backfill (ECS Container)
+
+**Container Execution Flow**:
+```python
+def channelbackfill_container_flow():
+    """Containerized channel data processing workflow"""
+    
+    # 1. Container initialization
+    container_config = {
+        'cpu': '2048',
+        'memory': '4096',
+        'platform': 'FARGATE',
+        'network_mode': 'awsvpc'
+    }
+    
+    # 2. CSV data processing
+    channel_csv_path = './channels_customids.csv'
+    processed_channels = process_channel_csv(channel_csv_path)
+    
+    # 3. GraphQL database updates
+    for channel_data in processed_channels:
+        result = graphql_client.create_partner_channel(
+            channel_id=channel_data['channelID'],
+            custom_id=channel_data['customID'],
+            display_name=channel_data['displayName']
+        )
+        
+        if result:
+            processed_count += 1
+        else:
+            error_count += 1
+    
+    # 4. EventBridge success event publication
+    event_payload = {
+        'Source': 'dn.backend.channelbackfill',
+        'DetailType': 'Channel Backfill Completed',
+        'Detail': json.dumps({
+            'status': 'success',
+            'processedCount': processed_count,
+            'errorCount': error_count,
+            'totalCount': len(processed_channels),
+            'timestamp': datetime.utcnow().isoformat()
+        }),
+        'EventBusName': 'dn-backend-workflow-bus-dev'
+    }
+    
+    eventbridge_client.put_events(Entries=[event_payload])
+    
+    # 5. Container completion
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'Channel backfill completed successfully',
+            'processedCount': processed_count,
+            'errorCount': error_count,
+            'totalCount': len(processed_channels)
+        })
+    }
+```
+
+#### Stage 2: CMS Custom ID Cleanup (ECS Container)
+
+**EventBridge-Triggered Container Flow**:
+```python
+def cms_cleanup_container_flow(eventbridge_event):
+    """EventBridge-triggered CMS cleanup processing"""
+    
+    # 1. Event validation
+    if not validate_channelbackfill_success_event(eventbridge_event):
+        return skip_processing_response()
+    
+    # 2. Container resource allocation
+    container_config = {
+        'cpu': '4096',
+        'memory': '8192',
+        'platform': 'FARGATE',
+        'execution_timeout': 'unlimited'
+    }
+    
+    # 3. Partner channel data retrieval
+    graphql_client = GraphQL()
+    partner_channels = await graphql_client.list_partner_channels()
+    partner_channel_ids = [ch.channelId for ch in partner_channels]
+    
+    # 4. S3 video report processing
+    s3_report_key = 'reports/video_report_Indmusic_V_v1-3.csv'
+    video_data = download_and_process_s3_report(s3_report_key)
+    
+    # 5. Channel filtering
+    filtered_videos = filter_videos_by_partner_channels(
+        video_data, 
+        partner_channel_ids
+    )
+    
+    # 6. Batch CMS updates with progress tracking
+    batch_size = 100
+    total_videos = len(filtered_videos)
+    processed_count = 0
+    
+    for i in range(0, total_videos, batch_size):
+        batch = filtered_videos[i:i + batch_size]
+        batch_results = process_cms_update_batch(batch, partner_channels)
+        
+        processed_count += len(batch_results['successful'])
+        
+        # Progress logging for long-running container
+        progress_percentage = ((i + len(batch)) / total_videos) * 100
+        logger.info(f"Processing progress: {progress_percentage:.1f}% "
+                   f"({processed_count}/{total_videos} videos)")
+        
+        # Export intermediate results
+        export_path = f"/tmp/{video_report.filterTarget}.json"
+        export_batch_results(batch_results['successful'], export_path)
+    
+    # 7. Container completion
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'CMS Custom ID cleanup completed successfully',
+            'processedCount': processed_count,
+            'totalVideos': total_videos,
+            'triggeredBy': eventbridge_event['detail']
+        })
+    }
+
+def process_cms_update_batch(video_batch, partner_channels):
+    """Process batch of CMS updates with error handling"""
+    
+    batch_results = {
+        'successful': [],
+        'failed': [],
+        'skipped': []
+    }
+    
+    for video in video_batch:
+        try:
+            # Find matching partner channel
+            channel_match = find_partner_channel(video['channel_id'], partner_channels)
+            
+            if not channel_match:
+                batch_results['skipped'].append(video)
+                continue
+            
+            # Validate update criteria
+            if video['asset_id'] and video['video_id'] == video['custom_id']:
+                # Execute YouTube CMS API update
+                api_request = APIRequest(video['asset_id'], api_token)
+                response = api_request.update_cms(
+                    channel_match.customId,
+                    channel_match.displayName
+                )
+                
+                if response:
+                    batch_results['successful'].append(video)
+                else:
+                    batch_results['failed'].append(video)
+            else:
+                batch_results['skipped'].append(video)
+                
+        except Exception as e:
+            logger.error(f"Failed to process video {video['video_id']}: {e}")
+            batch_results['failed'].append({
+                'video': video,
+                'error': str(e)
+            })
+    
+    return batch_results
+```
+
+#### EventBridge Integration Pattern
+
+**Event Publishing (channelbackfill)**:
+```python
+def publish_completion_event(processing_results):
+    """Publish channelbackfill completion event"""
+    
+    event_detail = {
+        'status': 'success' if processing_results['error_count'] == 0 else 'partial',
+        'processedCount': processing_results['processed_count'],
+        'errorCount': processing_results['error_count'],
+        'totalCount': processing_results['total_count'],
+        'timestamp': datetime.utcnow().isoformat(),
+        'containerInfo': {
+            'taskArn': os.environ.get('ECS_TASK_ARN'),
+            'clusterArn': os.environ.get('ECS_CLUSTER_ARN'),
+            'executionTime': processing_results['execution_time']
+        }
+    }
+    
+    eventbridge_client.put_events(
+        Entries=[{
+            'Source': 'dn.backend.channelbackfill',
+            'DetailType': 'Channel Backfill Completed',
+            'Detail': json.dumps(event_detail),
+            'EventBusName': 'dn-backend-workflow-bus-dev'
+        }]
+    )
+```
+
+**Event Consumption (cmsCustomidCleanup)**:
+```python
+def validate_trigger_event(event):
+    """Validate EventBridge trigger event structure"""
+    
+    required_fields = ['source', 'detail-type', 'detail']
+    
+    if not all(field in event for field in required_fields):
+        return False
+    
+    # Validate source and detail-type
+    if (event['source'] != 'dn.backend.channelbackfill' or
+        event['detail-type'] != 'Channel Backfill Completed'):
+        return False
+    
+    # Validate success status
+    detail = event.get('detail', {})
+    if isinstance(detail, str):
+        detail = json.loads(detail)
+    
+    if detail.get('status') != 'success':
+        logger.info(f"Skipping cleanup - channelbackfill status: {detail.get('status')}")
+        return False
+    
+    return True
+```
+
+#### Container Resource Management
+
+**Resource Optimization Patterns**:
+```python
+class ContainerResourceManager:
+    """Manage ECS container resources for optimal performance"""
+    
+    def __init__(self, task_type):
+        self.task_type = task_type
+        self.resource_configs = {
+            'channelbackfill': {
+                'cpu': 2048,  # 2 vCPU - optimized for I/O operations
+                'memory': 4096,  # 4 GB - sufficient for CSV processing
+                'expected_duration': '10-15 minutes'
+            },
+            'cms_cleanup': {
+                'cpu': 4096,  # 4 vCPU - optimized for sustained processing
+                'memory': 8192,  # 8 GB - large dataset handling
+                'expected_duration': '2-4 hours'
+            }
+        }
+    
+    def get_optimal_batch_size(self, dataset_size):
+        """Calculate optimal batch size based on available memory"""
+        
+        if self.task_type == 'cms_cleanup':
+            # Large dataset processing
+            memory_per_record = 0.5  # KB estimated
+            available_memory = self.resource_configs['cms_cleanup']['memory'] * 1024  # Convert to KB
+            
+            # Reserve 2GB for application overhead
+            usable_memory = available_memory - (2 * 1024 * 1024)
+            optimal_batch = int(usable_memory / memory_per_record / 1024)  # Convert back to records
+            
+            return min(optimal_batch, 1000)  # Cap at 1000 for safety
+        
+        return 100  # Default batch size
+    
+    def monitor_resource_usage(self):
+        """Monitor container resource utilization"""
+        
+        import psutil
+        
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory_info = psutil.virtual_memory()
+        
+        metrics = {
+            'cpu_usage_percent': cpu_percent,
+            'memory_usage_percent': memory_info.percent,
+            'memory_available_mb': memory_info.available / (1024 * 1024),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Log metrics for CloudWatch
+        logger.info(f"Container metrics: {json.dumps(metrics)}")
+        
+        return metrics
+```
+
+#### Error Handling and Recovery
+
+**Container-Level Error Management**:
+```python
+def container_error_handler(func):
+    """Decorator for container-level error handling"""
+    
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        
+        except Exception as e:
+            error_context = {
+                'function': func.__name__,
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'task_arn': os.environ.get('ECS_TASK_ARN'),
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            # Log structured error for CloudWatch
+            logger.error(f"Container error: {json.dumps(error_context)}")
+            
+            # Publish failure event if applicable
+            if func.__name__ == 'channelbackfill_container_flow':
+                publish_failure_event(error_context)
+            
+            # Exit container with error code
+            sys.exit(1)
+    
+    return wrapper
+
+def publish_failure_event(error_context):
+    """Publish channelbackfill failure event"""
+    
+    try:
+        eventbridge_client.put_events(
+            Entries=[{
+                'Source': 'dn.backend.channelbackfill',
+                'DetailType': 'Channel Backfill Failed',
+                'Detail': json.dumps({
+                    'status': 'failed',
+                    'error': error_context['error_message'],
+                    'timestamp': error_context['timestamp']
+                }),
+                'EventBusName': 'dn-backend-workflow-bus-dev'
+            }]
+        )
+    except Exception as publish_error:
+        logger.error(f"Failed to publish failure event: {publish_error}")
+```
+
+### 6. Data Consistency and Integrity Patterns
 
 #### Concurrency Control
 

@@ -16,6 +16,55 @@ This document catalogs all EventBridge rules configured for automated task execu
 - **Target Type**: ECS Task
 - **Created**: Automated infrastructure deployment
 
+### Custom ID Cleanup Workflow
+
+**Event Bus**: `dn-backend-workflow-bus-dev`
+
+#### channelbackfill Success Trigger
+
+**Rule Configuration:**
+- **Name**: `channelbackfill-success-trigger-dev`
+- **Event Pattern**: 
+  ```json
+  {
+    "detail-type": ["Channel Backfill Completed"],
+    "source": ["dn.backend.channelbackfill"],
+    "detail": {
+      "status": ["success"]
+    }
+  }
+  ```
+- **Description**: Triggers CMS cleanup when channelbackfill completes successfully
+- **State**: ENABLED
+- **Target Type**: ECS Task
+- **Created**: Custom ID cleanup workflow implementation
+
+**Target Configuration:**
+- **ECS Cluster**: `amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL`
+- **Task Definition**: `cmscustomidcleanup-task:2`
+- **Launch Type**: FARGATE
+- **Task Count**: 1
+- **Role ARN**: `arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole`
+
+#### channelbackfill Failure Alert
+
+**Rule Configuration:**
+- **Name**: `channelbackfill-failure-alert-dev`
+- **Event Pattern**:
+  ```json
+  {
+    "detail-type": ["Channel Backfill Failed"],
+    "source": ["dn.backend.channelbackfill"],
+    "detail": {
+      "status": ["failed"]
+    }
+  }
+  ```
+- **Description**: Captures channelbackfill failures for alerting
+- **State**: ENABLED
+- **Target Type**: SNS/CloudWatch (future implementation)
+- **Created**: Custom ID cleanup workflow implementation
+
 **Target Configuration:**
 - **ECS Cluster**: Default cluster
 - **Task Definition**: `dn-task-claims-report-process:4`
@@ -34,6 +83,16 @@ This document catalogs all EventBridge rules configured for automated task execu
 - **Assign Public IP**: ENABLED
 - **Security Groups**: Configured for minimal required access
 - **Subnets**: Private subnets with NAT gateway access
+
+#### Custom ID Cleanup Network Configuration
+- **Network Mode**: awsvpc
+- **VPC Configuration**:
+  - **Subnets**: 
+    - subnet-0614f6234c8532909 (<REGION>a)
+    - subnet-07af64e6a2897f64c (<REGION>b) 
+    - subnet-05e6b470667a77016 (<REGION>c)
+  - **Security Groups**: sg-0e95bc87b1582a935
+- **Assign Public IP**: ENABLED
 
 ## Schedule Patterns
 
@@ -115,6 +174,31 @@ This document catalogs all EventBridge rules configured for automated task execu
 - ECS tasks use dedicated execution and task roles
 - Principle of least privilege applied to all configurations
 - Regular audit of permissions and access patterns
+
+#### Custom ID Cleanup IAM Configuration
+**ecsTaskExecutionRole Trust Policy**:
+```json
+{
+  "Version": "2008-10-17", 
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "ecs-tasks.amazonaws.com",
+          "events.amazonaws.com"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+
+**Required Policies**:
+- `AmazonECSTaskExecutionRolePolicy` (AWS managed)
+- `ECS-EventBridge-PutEvents-Policy` (custom)
+- `EventBridge-ECS-RunTask-Policy` (custom)
 
 ### Network Security
 - Tasks execute in private subnets with controlled internet access

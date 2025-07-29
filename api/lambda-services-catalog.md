@@ -79,12 +79,14 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 | `amplifyDistroFMYoutubeChannelParse-main` | nodejs18.x | YouTube channel parsing | Database |
 
 #### Content Management System
-| Function | Runtime | Purpose | CMS Operation |
-|----------|---------|---------|---------------|
-| `cmsCustomidCleanup-dev` | nodejs18.x | CMS custom ID cleanup | Data maintenance |
-| `cmscustomidupdate-dev` | nodejs18.x | CMS custom ID updates | Data updates |
-| `dnbackendUpdateCMSCustomId-dev` | nodejs18.x | Backend CMS ID updates | Data synchronization |
-| `dnbackendUpdateChannelsCustomIds-dev` | nodejs18.x | Channel ID updates | Channel management |
+| Function | Runtime | Purpose | CMS Operation | Status |
+|----------|---------|---------|---------------|---------|
+| ~~`cmsCustomidCleanup-dev`~~ | ~~nodejs18.x~~ | ~~CMS custom ID cleanup~~ | ~~Data maintenance~~ | **Migrated to ECS** |
+| `cmscustomidupdate-dev` | nodejs18.x | CMS custom ID updates | Data updates | Active |
+| `dnbackendUpdateCMSCustomId-dev` | nodejs18.x | Backend CMS ID updates | Data synchronization | Active |
+| `dnbackendUpdateChannelsCustomIds-dev` | nodejs18.x | Channel ID updates | Channel management | Active |
+
+**Migration Note**: `cmsCustomidCleanup-dev` was migrated to ECS due to Lambda's 15-minute execution timeout limit. The function processes large datasets (38,000+ videos) requiring unlimited execution time.
 
 ### 4. Database & Data Management Services
 
@@ -152,12 +154,14 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 | `amplifyDistrofmUserImageUpdate-main` | nodejs20.x | User image updates | Profile images |
 
 #### System Utilities
-| Function | Runtime | Purpose | Utility Type |
-|----------|---------|---------|--------------|
-| `test` | python3.12 | Testing function | Development |
-| `channelbackfill-dev` | nodejs18.x | Channel data backfill | Data migration |
-| `dn_lnvn_shorts_backfill` | nodejs18.x | Shorts content backfill | Content migration |
-| `dn_lnvn_livestream_write` | nodejs18.x | Livestream data writing | Live content |
+| Function | Runtime | Purpose | Utility Type | Status |
+|----------|---------|---------|--------------|---------|
+| `test` | python3.12 | Testing function | Development | Active |
+| ~~`channelbackfill-dev`~~ | ~~nodejs18.x~~ | ~~Channel data backfill~~ | ~~Data migration~~ | **Migrated to ECS** |
+| `dn_lnvn_shorts_backfill` | nodejs18.x | Shorts content backfill | Content migration | Active |
+| `dn_lnvn_livestream_write` | nodejs18.x | Livestream data writing | Live content | Active |
+
+**Migration Note**: `channelbackfill-dev` was migrated to ECS as part of the custom ID cleanup workflow. It triggers `cmsCustomidCleanup` via EventBridge after completion.
 
 ### 8. Infrastructure & Framework Services
 
@@ -192,6 +196,9 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 - **Cognito**: User authentication and authorization
 - **API Gateway**: HTTP endpoint exposure
 - **CloudWatch**: Logging and monitoring
+- **Amazon ECS**: Containerized task execution for long-running processes
+- **Amazon ECR**: Container image storage and management
+- **Amazon EventBridge**: Event-driven workflow orchestration
 
 ### Internal Service Communication
 - **Database Layer**: PostgreSQL Lambda functions serve as data access layer
@@ -202,12 +209,13 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 ## Performance Characteristics
 
 ### Runtime Distribution
-- **Node.js 18.x**: 54 functions (64%)
-- **Node.js 20.x**: 18 functions (21%)
+- **Node.js 18.x**: 52 functions (63%) - 2 migrated to ECS
+- **Node.js 20.x**: 18 functions (22%)
 - **Python 3.8**: 3 functions (4%)
 - **Python 3.12**: 4 functions (5%)
 - **Node.js 16.x**: 1 function (1%)
 - **Unknown/None**: 4 functions (5%)
+- **ECS Containers**: 2 tasks (2%) - channelbackfill, cmsCustomidCleanup
 
 ### Concurrency Patterns
 - **High Concurrency**: Analytics and data processing functions

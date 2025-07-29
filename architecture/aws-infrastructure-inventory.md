@@ -15,15 +15,34 @@
 | i-090dc75e90525eb5e | t2.micro | stopped | vpn | VPN server |
 | i-0063537094eb961dd | t3.micro | **running** | Shazampy-env | Active environment |
 
-### Lambda Functions (Key Functions - 84 total)
-| Function | Runtime | Purpose |
-|----------|---------|---------|
-| POSTGRESQL_LAMBDA | nodejs20.x | Database operations |
-| DN_Send_Mail | python3.12 | Email notifications |
-| YouTube_API_Token | nodejs18.x | YouTube API integration |
-| dn_payouts_fetch | python3.12 | Payout processing |
-| dn_spotify_analytics | nodejs18.x | Spotify data analytics |
-| dn_tiktok_analytics | nodejs18.x | TikTok data analytics |
+### ECS Clusters
+| Cluster Name | ARN | Status | Platform | Purpose |
+|-------------|-----|--------|----------|---------|
+| amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL | arn:aws:ecs:<REGION>:<AWS_ACCOUNT_ID>:cluster/amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL | **active** | AWS Fargate | Long-running tasks and batch processing |
+
+### ECS Task Definitions
+| Task Definition | Revision | CPU | Memory | Purpose |
+|----------------|----------|-----|--------|---------|
+| channelbackfill-task | 2 | 2048 | 4096 | Channel data backfill processing |
+| cmscustomidcleanup-task | 2 | 4096 | 8192 | YouTube CMS custom ID cleanup |
+
+### Container Registry (ECR)
+| Repository Name | URI | Purpose |
+|----------------|-----|---------|
+| amplify-dnbackendfunctions-dev-57767-api-channelbackfill-api | <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-channelbackfill-api | Channel backfill container images |
+| amplify-dnbackendfunctions-dev-57767-api-cmscustomidupdate-api | <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-cmscustomidupdate-api | CMS custom ID cleanup container images |
+
+### Lambda Functions (Key Functions - 82 total, 2 migrated to ECS)
+| Function | Runtime | Purpose | Migration Status |
+|----------|---------|---------|------------------|
+| POSTGRESQL_LAMBDA | nodejs20.x | Database operations | Active |
+| DN_Send_Mail | python3.12 | Email notifications | Active |
+| YouTube_API_Token | nodejs18.x | YouTube API integration | Active |
+| dn_payouts_fetch | python3.12 | Payout processing | Active |
+| dn_spotify_analytics | nodejs18.x | Spotify data analytics | Active |
+| dn_tiktok_analytics | nodejs18.x | TikTok data analytics | Active |
+| ~~channelbackfill-dev~~ | ~~nodejs18.x~~ | ~~Channel data backfill~~ | **Migrated to ECS** |
+| ~~cmsCustomidCleanup-dev~~ | ~~nodejs18.x~~ | ~~CMS custom ID cleanup~~ | **Migrated to ECS** |
 
 ## Database Resources
 
@@ -80,10 +99,14 @@
 2. **API Requests** → API Gateway → Lambda Functions → Aurora PostgreSQL
 3. **File Storage** → S3 Buckets (audio, uploads, profiles, backups)
 4. **External Integrations** → YouTube, Spotify, TikTok APIs via Lambda
+5. **Batch Processing** → EventBridge → ECS Fargate Tasks → Aurora PostgreSQL
+6. **Long-running Tasks** → ECS Cluster → Container processing → S3/Database
 
 ### Key Patterns
-- **Serverless-first architecture** with extensive Lambda usage
+- **Hybrid serverless architecture** with Lambda for APIs and ECS for long-running tasks
 - **Multi-environment setup** (dev, staging, main) using Amplify
 - **Media-focused infrastructure** with specialized buckets for audio, video, images
 - **Analytics integration** with YouTube, Spotify, TikTok platforms
 - **PostgreSQL Aurora** as primary database with serverless scaling
+- **Event-driven processing** using EventBridge for workflow orchestration
+- **Containerized batch processing** for tasks exceeding Lambda timeout limits
