@@ -115,6 +115,10 @@ python-dotenv==1.0.0
 cryptography==41.0.4
 PyJWT==2.8.0
 
+# Input validation and serialization
+marshmallow==3.20.1
+marshmallow-sqlalchemy==0.29.0
+
 # Utility libraries
 python-dateutil==2.8.2
 pytz==2023.3
@@ -180,6 +184,15 @@ CREATE EXTENSION IF NOT EXISTS "btree_gin"; -- For advanced indexing
 
 ### 4. Environment Configuration
 
+**Critical Environment Variables (Required)**
+
+The application implements fail-fast validation for critical environment variables. The following variables are **REQUIRED** and must be set or the application will refuse to start:
+
+- `FLASK_SECRET_KEY`: Used for session security and CSRF protection
+- `DATABASE_URL`: PostgreSQL database connection string
+- `CUSTOM_AWS_ACCESS_KEY`: AWS access key for S3 operations
+- `CUSTOM_AWS_SECRET_KEY`: AWS secret key for S3 operations
+
 **Environment Variables Setup**
 ```bash
 # Create .env file in project root
@@ -187,14 +200,14 @@ touch .env
 
 # Add the following configuration
 cat > .env << 'EOF'
-# Flask Configuration
+# Flask Configuration (REQUIRED)
 FLASK_APP=app.py
 FLASK_ENV=development
 FLASK_DEBUG=True
-FLASK_SECRET_KEY=your-super-secret-development-key
+FLASK_SECRET_KEY=your-super-secret-development-key  # REQUIRED - Application will fail without this
 
-# Database Configuration
-DATABASE_URL=postgresql://ytcms_user:your_secure_password@localhost:5432/youtube_cms_dev
+# Database Configuration (REQUIRED)
+DATABASE_URL=postgresql://ytcms_user:your_secure_password@localhost:5432/youtube_cms_dev  # REQUIRED
 TEST_DATABASE_URL=postgresql://ytcms_user:your_secure_password@localhost:5432/youtube_cms_test
 
 # YouTube API Configuration
@@ -202,9 +215,9 @@ YOUTUBE_API_KEY=your_youtube_api_key_here
 YOUTUBE_CLIENT_ID=your_youtube_client_id
 YOUTUBE_CLIENT_SECRET=your_youtube_client_secret
 
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+# AWS Configuration (REQUIRED)
+CUSTOM_AWS_ACCESS_KEY=your_aws_access_key  # REQUIRED - Application will fail without this
+CUSTOM_AWS_SECRET_KEY=your_aws_secret_key  # REQUIRED - Application will fail without this
 S3_BUCKET_NAME=yt-cms-reports-dev
 AWS_REGION=us-east-1
 
@@ -212,7 +225,7 @@ AWS_REGION=us-east-1
 ENCRYPTION_KEY=generate_this_with_cryptography_fernet
 JWT_SECRET_KEY=another-secret-key-for-jwt
 
-# Logging Configuration
+# Logging Configuration  
 LOG_LEVEL=DEBUG
 LOG_FILE=logs/youtube_cms.log
 
@@ -240,6 +253,23 @@ print(f"FLASK_SECRET_KEY={flask_secret}")
 jwt_secret = secrets.token_urlsafe(32)
 print(f"JWT_SECRET_KEY={jwt_secret}")
 ```
+
+**Input Validation Framework**
+
+The application uses Marshmallow for comprehensive input validation and serialization. This provides:
+
+- **Request validation**: All API endpoints validate incoming data against predefined schemas
+- **Data sanitization**: Automatic cleaning and type conversion of input data
+- **Error handling**: Structured validation error responses
+- **Security**: Protection against malformed or malicious input
+
+Key validation schemas include:
+- Video metadata validation
+- Bulk update operations
+- File upload validation
+- API parameter validation
+
+The validation framework is automatically integrated into all API routes and will return structured error responses for invalid input.
 
 ### 5. External Service Configuration
 
@@ -471,6 +501,22 @@ app.run(debug=True, host='0.0.0.0', port=5000)
 
 ### 2. Testing Setup
 
+**Test Framework**
+
+The application uses pytest as the primary testing framework with additional testing dependencies:
+
+- **pytest**: Core testing framework
+- **pytest-flask**: Flask-specific testing utilities
+- **pytest-cov**: Coverage reporting
+- **pytest-mock**: Mocking capabilities
+- **marshmallow**: Input validation testing
+
+**Development Dependencies**
+```bash
+# Install all development dependencies
+pip install pytest pytest-flask pytest-cov pytest-mock marshmallow
+```
+
 **Test Configuration**
 ```python
 # Create conftest.py for pytest configuration
@@ -500,12 +546,32 @@ def client():
 def auth_headers():
     # Mock authentication headers for testing
     return {'Authorization': 'Bearer test-token'}
+
+@pytest.fixture
+def sample_video_data():
+    # Sample data for validation testing
+    return {
+        'video_id': 'test123',
+        'title': 'Test Video',
+        'artist': ['Test Artist'],
+        'genre': ['Pop'],
+        'privacy_status': 'public'
+    }
 ```
+
+**Test Categories**
+
+The testing suite includes:
+
+- **Unit tests**: Individual function and method testing
+- **Integration tests**: Database and API endpoint testing  
+- **Validation tests**: Marshmallow schema validation testing
+- **Security tests**: Input sanitization and authentication testing
 
 **Run Tests**
 ```bash
-# Install test dependencies
-pip install pytest pytest-flask pytest-cov
+# Install test dependencies (if not already installed)
+pip install pytest pytest-flask pytest-cov pytest-mock
 
 # Run all tests
 pytest
@@ -521,6 +587,48 @@ pytest -v
 
 # Run tests and stop on first failure
 pytest -x
+
+# Run validation-specific tests
+pytest -k "validation"
+
+# Run tests with markers
+pytest -m "integration"
+```
+
+**pytest Configuration**
+
+Create a `pytest.ini` file in the project root for consistent test configuration:
+
+```ini
+[tool:pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = 
+    -v
+    --tb=short
+    --strict-markers
+    --disable-warnings
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    validation: Input validation tests
+    security: Security-related tests
+```
+
+**Test Directory Structure**
+```
+tests/
+├── __init__.py
+├── conftest.py
+├── test_models.py         # Model validation tests
+├── test_routes.py         # API endpoint tests
+├── test_validation.py     # Marshmallow schema tests
+├── test_security.py       # Security and input sanitization tests
+└── fixtures/
+    ├── sample_data.json
+    └── test_files/
 ```
 
 ### 3. Database Operations

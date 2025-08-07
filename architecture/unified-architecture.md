@@ -14,10 +14,11 @@ The Distro Nation infrastructure operates as a hybrid cloud architecture, levera
   - **Authentication**: Firebase Auth + AWS Cognito
   - **Deployment**: Firebase Hosting with CloudFront CDN
 - **YouTube CMS Metadata Tool**: Flask-based Python web application for content metadata management
-  - **Technology**: Python Flask, PostgreSQL, HTML/CSS/JavaScript
-  - **Authentication**: Environment-based configuration with YouTube API integration
-  - **Deployment**: Standalone deployment with potential Docker containerization
-  - **Integration**: Real-time WebSocket connections, AWS S3 report processing
+  - **Technology**: Python 3.11+, Flask with Blueprint architecture, PostgreSQL, Marshmallow validation
+  - **Authentication**: Hybrid Flask-Security/Firebase system with password recovery and Argon2 hashing
+  - **Architecture**: Modular blueprint structure with centralized error handling and input validation
+  - **Deployment**: WSGI-compatible with comprehensive environment validation
+  - **Integration**: Real-time WebSocket connections, AWS S3 report processing, structured logging
 - **API Clients**: Access through AWS API Gateway
 
 ### Authentication & Authorization
@@ -198,6 +199,9 @@ Firebase Services
 ```
 Client Authentication
 ├── Firebase Auth (primary)
+├── Flask-Security (backup)
+├── Password Recovery System
+├── Argon2 Password Hashing
 ├── Custom JWT tokens
 ├── AWS Lambda validation
 └── Aurora user records

@@ -25,6 +25,10 @@ The application follows a traditional three-tier architecture pattern with moder
 │  │   Flask Routes  │  │  Business Logic │  │  WebSocket   │ │
 │  │   & Controllers │  │  & Services     │  │  Handlers    │ │
 │  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │ Error Handling  │  │ Input Validation│  │   Logging    │ │
+│  │ & Exceptions    │  │ & Schemas       │  │ & Monitoring │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                                 │
 ┌─────────────────────────────────────────────────────────────┐
@@ -39,16 +43,20 @@ The application follows a traditional three-tier architecture pattern with moder
 ### Technology Stack
 
 #### Backend Technologies
-- **Python 3.8+**: Core application runtime
-- **Flask 2.x**: Web application framework
+- **Python 3.11+**: Core application runtime
+- **Flask 3.x**: Web application framework with Blueprint architecture
 - **SQLAlchemy**: Database ORM and query builder
 - **Flask-Migrate**: Database migration management
 - **Alembic**: Database schema versioning
 - **Flask-SocketIO**: Real-time bidirectional communication
-- **Gunicorn**: WSGI HTTP Server for production deployment
-- **Node.js 18.x**: Containerized batch processing runtime
-- **Amazon ECS**: Container orchestration platform
-- **Amazon EventBridge**: Event-driven workflow coordination
+- **Flask-Security**: Authentication and user management
+- **Flask-Mail**: Email functionality for password recovery
+- **Marshmallow**: Comprehensive input validation and serialization framework
+- **Argon2-CFFI**: Secure password hashing backend
+- **Custom Exception Hierarchy**: Domain-specific error handling with 15+ specialized exception classes
+- **Centralized Error Handlers**: Flask error handler system with standardized JSON responses
+- **Structured Logging**: Enhanced logging with file persistence and request context tracking
+- **Blueprint Architecture**: Modular route organization with 5 focused blueprints
 
 #### Database & Storage
 - **PostgreSQL 13+**: Primary database with advanced features
@@ -128,12 +136,23 @@ Tracks file processing operations:
 
 ### 2. Application Services
 
+#### Blueprint Architecture
+The application follows a modular blueprint structure with clear separation of concerns:
+
+- **Main Blueprint** (`api/main.py`): Homepage and administrative interface routes
+- **System Blueprint** (`api/system.py`): Database operations and token management
+- **Reports Blueprint** (`api/reports.py`): S3 report processing, status monitoring, and CSV export
+- **Admin Blueprint** (`api/admin.py`): Administrative operations, asset management, and channel operations
+- **Videos Blueprint** (`api/videos.py`): Video management including filtering, synchronization, and bulk operations
+
 #### Route Handlers
-- **Video Management**: CRUD operations, filtering, and bulk updates
-- **Channel Management**: Channel information and analytics
-- **Report Processing**: S3 report ingestion and processing
-- **Admin Functions**: Administrative tools and system management
-- **API Endpoints**: RESTful API for external integrations
+- **Video Management**: CRUD operations, filtering, and bulk updates with comprehensive input validation
+- **Channel Management**: Channel information and analytics with data validation
+- **Report Processing**: S3 report ingestion and processing with file validation
+- **Admin Functions**: Administrative tools and system management with role-based access
+- **API Endpoints**: RESTful API for external integrations with Marshmallow schema validation
+- **Input Validation Layer**: Marshmallow-based validation schemas for all API endpoints ensuring data integrity
+- **Centralized Error Handling**: Comprehensive error handling system with custom exception hierarchy and standardized response format
 
 #### Business Logic Services
 - **Metadata Synchronization**: YouTube API integration
@@ -141,48 +160,100 @@ Tracks file processing operations:
 - **Database Operations**: Complex queries and data aggregation
 - **Real-time Notifications**: WebSocket event management
 
+#### Validation Framework
+Comprehensive input validation system built on Marshmallow:
+- **Schema Definitions**: 15+ validation schemas for all API endpoints
+- **Type Safety**: Strict data type validation and conversion
+- **Request Sanitization**: Input sanitization and constraint enforcement
+- **Error Standardization**: Consistent validation error responses
+
+#### Error Handling System
+Centralized error management with custom exception hierarchy:
+- **Custom Exceptions**: 15+ domain-specific exception classes
+- **HTTP Status Mapping**: Proper status codes (400, 401, 403, 404, 422, 429, 500, 502, 503)
+- **Standardized Responses**: Consistent JSON error format across all endpoints
+- **Request Context**: Error logs include request path, method, and user context
+- **Development vs Production**: Debug information included only in development mode
+
 #### Utility Modules
-- **S3 Integration**: File upload, download, and management
+- **S3 Integration**: File upload, download, and management with security validation
 - **Database Backup**: Automated backup and recovery procedures
-- **Token Management**: Secure credential handling
-- **Error Handling**: Comprehensive error logging and reporting
+- **Token Management**: Secure credential handling with environment validation
+- **Environment Validation**: Fail-fast startup validation for critical configuration
+- **Enhanced Logging**: Structured logging with file persistence, request context, and security audit trails
 
 ## Data Flow Architecture
 
 ### 1. Report Processing Flow
 ```
 S3 Report Upload → Download & Parse → Database Update → Real-time Notification
+                    ↓ (on error)
+               Error Handler → Structured Response → User Notification
 ```
 
 ### 2. Metadata Synchronization Flow
 ```
 Database Changes → YouTube API Sync → Status Update → User Notification
+                    ↓ (on error)
+               Error Handler → Exception Logging → Error Response
 ```
 
 ### 3. User Interaction Flow
 ```
-Web Interface → API Request → Database Query → Response Processing → UI Update
+Web Interface → Blueprint Route → Input Validation → Business Logic → Database Query → Response Processing → UI Update
+                      ↓ (auth error)    ↓ (validation error)     ↓ (business error)   ↓ (database error)      ↓ (processing error)
+                 Error Handler ← Error Handler ← Error Handler ← Error Handler ← Error Handler
+                      ↓
+              Standardized JSON Response → User Notification
+```
+
+### 4. Error Handling Flow
+```
+Exception Raised → Exception Classification → Error Handler Selection → Response Generation
+       |                    |                         |                        |
+   Custom/System     YouTubeCMSError         Appropriate Handler       JSON Response
+   Exceptions        Subclasses              (validation/db/http)      + HTTP Status
+       |                    |                         |                        |
+   Stack Trace      Structured Details        Context Enrichment       Client/Logs
+   Capture          + Status Codes            + Request Info           Distribution
 ```
 
 ## Security Architecture
 
+### Environment & Configuration Security
+- **Fail-Fast Environment Validation**: Critical environment variables are validated at application startup to prevent runtime failures
+- **Secure Configuration Management**: Environment-based configuration with mandatory security checks
+- **API Key Protection**: Secure storage and rotation of sensitive credentials
+- **Configuration Validation Framework**: Comprehensive validation of all required environment variables before application initialization
+
+### Input Validation & Data Security
+- **Marshmallow Schema Validation**: Comprehensive input validation framework using Marshmallow schemas for all API endpoints
+- **Request Data Sanitization**: All incoming data is validated and sanitized before processing
+- **Type Safety**: Strict data type validation and conversion for all user inputs
+- **SQL Injection Prevention**: Parameterized queries and ORM usage to prevent injection attacks
+- **XSS Protection**: Input sanitization and output encoding in frontend rendering
+
 ### Authentication & Authorization
-- Environment-based configuration management
-- Secure API key storage and rotation
-- Role-based access control for admin functions
-- Input validation and sanitization
+- **Hybrid Authentication System**: Dual authentication supporting both Flask-Security and Firebase
+- **Flask-Security Integration**: Traditional username/password authentication with role-based access control
+- **Firebase Authentication**: Google OAuth 2.0 integration for social login
+- **Password Recovery**: Secure token-based password reset functionality with email integration
+- **Argon2 Password Hashing**: Industry-standard secure password storage
+- **Session Security**: Secure session management with proper timeout and invalidation
+- **API Endpoint Protection**: Authentication requirements for all sensitive endpoints with `@login_required` decorators
+- **Request Validation**: Multi-layer validation including authentication, authorization, and input validation
 
 ### Data Protection
-- SQL injection prevention through ORM usage
-- XSS protection in frontend rendering
-- HTTPS enforcement for all communications
-- Secure session management
+- **HTTPS Enforcement**: All communications encrypted in transit
+- **Database Security**: Connection encryption and secure credential management
+- **File Upload Security**: Validated file types and secure processing of uploaded content
+- **Audit Logging**: Comprehensive logging of all security-relevant operations
 
 ### Integration Security
-- OAuth 2.0 for YouTube API authentication
-- AWS IAM roles for S3 access
-- Encrypted communication channels
-- Audit logging for sensitive operations
+- **OAuth 2.0**: Secure YouTube API authentication with token refresh handling
+- **AWS IAM**: Role-based access control for S3 and other AWS services
+- **Encrypted Communication**: All external API communications use encrypted channels
+- **Third-Party Validation**: Validation of all data received from external services
 
 ## Performance Considerations
 
@@ -219,12 +290,12 @@ Web Interface → API Request → Database Query → Response Processing → UI 
 - Monitoring and logging integration
 - Automated backup procedures
 
-### Containerized Processing Environment
-- **Amazon ECS**: Fargate-based container orchestration
-- **Custom ID Cleanup Workflow**: Event-driven batch processing
-- **Container Images**: Stored in Amazon ECR
-- **Resource Allocation**: Configurable CPU and memory per task
-- **Network Integration**: VPC-based secure communication
+### Application Deployment
+- **Development Environment**: Local Flask development server with hot reload
+- **Production Readiness**: WSGI-compatible server deployment
+- **Database Migrations**: Alembic-based schema management
+- **Environment Configuration**: Comprehensive environment variable validation
+- **Logging Infrastructure**: File-based logging with rotation and structured output
 
 ## Integration Points
 
@@ -235,19 +306,17 @@ Web Interface → API Request → Database Query → Response Processing → UI 
 - Real-time status updates
 
 ### AWS Services
-- S3 for report storage and processing
-- IAM for access control
-- CloudWatch for monitoring (future enhancement)
-- **Amazon ECS**: Containerized custom ID cleanup processing
-- **Amazon EventBridge**: Event-driven workflow orchestration
-- **Amazon ECR**: Container image storage and management
+- **S3**: Report storage, processing, and backup functionality
+- **IAM**: Access control for S3 operations
+- **Boto3 SDK**: Python integration for AWS service interaction
+- **CloudWatch**: Monitoring and logging (available for future enhancement)
 
 ### Internal Distro Nation Systems
 - Integration with existing content workflows
-- Shared authentication systems
+- Hybrid authentication system compatibility
 - Cross-system data consistency
-- Audit trail maintenance
-- **ECS-based Custom ID Processing**: Automated channel backfill and CMS cleanup workflow
+- Comprehensive audit trail maintenance
+- Real-time synchronization with YouTube CMS
 
 ## Future Enhancement Opportunities
 
