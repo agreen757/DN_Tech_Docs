@@ -539,45 +539,247 @@ SQLALCHEMY_ENGINE_OPTIONS = {
 - **IAM**: Access control and security
 - **CloudWatch**: Monitoring and logging (future enhancement)
 
-## Error Handling Components
+## Validation Components
 
-### Global Error Handler (`app.py`)
+### Request Validation (`validation.py`)
 
-**Purpose**: Centralized error handling and logging system.
+**Purpose**: Comprehensive input validation and sanitization using Marshmallow schemas.
+
+**Key Schemas**:
+```python
+class VideoFilterSchema(Schema):
+    """Schema for validating video listing filters"""
+    page = fields.Integer(missing=1, validate=validate.Range(min=1))
+    per_page = fields.Integer(missing=20, validate=validate.Range(min=1, max=100))
+    search = fields.String(missing=None, validate=validate.Length(max=200))
+    channel_search = fields.String(missing=None, validate=validate.Length(max=200))
+    category = fields.String(missing=None, validate=validate.Length(max=50))
+    duration = fields.String(missing=None, validate=validate.OneOf(['short', 'medium', 'long']))
+    video_id = fields.String(missing=None, validate=validate.Length(max=20))
+    asset_id = fields.String(missing=None, validate=validate.Length(max=50))
+    custom_id = fields.String(missing=None, validate=validate.Length(max=100))
+    has_asset_id = fields.String(missing=None, validate=validate.OneOf(['yes', 'no']))
+    policy = fields.String(missing=None, validate=validate.OneOf(['Monetizing', 'Not Monetizing']))
+    date_from = fields.Date(missing=None)
+    date_to = fields.Date(missing=None)
+    sort_by = fields.String(missing='updated_at', validate=validate.OneOf(['title', 'updated_at', 'category', 'video_length']))
+    order = fields.String(missing='desc', validate=validate.OneOf(['asc', 'desc']))
+
+class VideoUpdateSchema(Schema):
+    """Schema for validating bulk video updates"""
+    video_ids = fields.List(fields.String(validate=validate.Length(max=20)), required=True, validate=validate.Length(min=1, max=100))
+    notes = fields.String(missing=None, validate=validate.Length(max=500))
+    administered = fields.Boolean(missing=None)
+
+class VideoSyncSchema(Schema):
+    """Schema for validating video metadata sync requests"""
+    artist = fields.String(missing=None, validate=validate.Length(max=200))
+    customId = fields.String(missing=None, validate=validate.Length(max=100))
+    isrc = fields.String(missing=None, validate=validate.Length(max=12))
+    upc = fields.String(missing=None, validate=validate.Length(max=20))
+
+class ChannelUpdateSchema(Schema):
+    """Schema for validating channel update requests"""
+    new_name = fields.String(required=True, validate=validate.Length(min=1, max=200))
+```
+
+**Utility Functions**:
+```python
+def validate_request_data(schema: Schema, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Validate request data against a schema and return cleaned data"""
+    
+def create_validation_error_response(error: ValidationError) -> Dict[str, Any]:
+    """Create standardized error response from validation errors"""
+```
 
 **Features**:
+- Type validation and coercion
+- Length and range constraints
+- Enumerated value validation
+- Custom error messages
+- Sanitization of input data
+- Standardized error responses
+- Logging of validation failures
+
+## Security Components
+
+### Environment Variable Validation (`app.py`)
+
+**Purpose**: Secure configuration management with fail-fast validation.
+
+**Key Functions**:
 ```python
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    return render_template('500.html'), 500
-
-# Database error handling
-@app.errorhandler(IntegrityError)
-def handle_db_error(error):
-    db.session.rollback()
-    return jsonify({'error': 'Database constraint violation'}), 400
+def validate_required_environment_variables():
+    """Validate that all required environment variables are present and fail fast if missing"""
+    required_vars = {
+        'FLASK_SECRET_KEY': 'Flask secret key for session management',
+        'DATABASE_URL': 'PostgreSQL database connection URL',
+        'CUSTOM_AWS_ACCESS_KEY': 'AWS access key for S3 operations',
+        'CUSTOM_AWS_SECRET_KEY': 'AWS secret key for S3 operations'
+    }
+    
+    missing_vars = []
+    for var_name, description in required_vars.items():
+        if not os.environ.get(var_name):
+            missing_vars.append(f"{var_name} ({description})")
+    
+    if missing_vars:
+        error_message = f"Missing required environment variables:\n" + "\n".join(f"  - {var}" for var in missing_vars)
+        logger.error(error_message)
+        raise ValueError(error_message)
+    
+    logger.info("All required environment variables are present")
 ```
 
-### Logging Configuration
+**Features**:
+- Startup-time validation of critical configuration
+- Clear error messages with descriptions
+- Fail-fast approach to prevent runtime issues
+- Comprehensive logging of validation results
+- Security-focused configuration management
 
-**Purpose**: Comprehensive logging for debugging and monitoring.
+## Error Handling Components
 
+### Custom Exception Hierarchy (`exceptions.py`)
+
+**Purpose**: Domain-specific exception classes providing clear, meaningful error messages with proper HTTP status code mapping.
+
+**Base Exception Class**:
 ```python
-import logging
+class YouTubeCMSError(Exception):
+    """Base exception class for all YouTube CMS application errors."""
+    
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None, status_code: int = 500):
+        super().__init__(message)
+        self.message = message
+        self.details = details or {}
+        self.status_code = status_code
+        logger.error(f"{self.__class__.__name__}: {message}", extra={'details': details})
+```
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+**Specialized Exception Classes**:
+- **ValidationError**: Request validation failures (400)
+- **VideoNotFoundError**: Video resource not found (404)
+- **ChannelNotFoundError**: Channel resource not found (404)
+- **YouTubeAPIError**: YouTube API integration failures (502)
+- **S3ProcessingError**: S3 file processing failures (502)
+- **DatabaseError**: Database operation failures (500)
+- **AuthenticationError**: Authentication failures (401)
+- **AuthorizationError**: Authorization failures (403)
+- **ConfigurationError**: Application configuration errors (500)
+- **RateLimitError**: Rate limit exceeded (429)
+- **FileProcessingError**: File processing errors (422)
+- **ExternalServiceError**: External service call failures (502)
+- **BusinessLogicError**: Business logic constraint violations (422)
+- **ConcurrencyError**: Concurrent operation conflicts (409)
+- **MaintenanceError**: System maintenance mode (503)
 
-# Custom log formatting
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+**Features**:
+- Automatic logging with structured details
+- HTTP status code mapping
+- Additional context preservation
+- Exception factory pattern for status code conversion
+
+### Centralized Error Handlers (`error_handlers.py`)
+
+**Purpose**: Flask error handlers that convert exceptions into standardized JSON responses with appropriate HTTP status codes.
+
+**Key Functions**:
+```python
+def register_error_handlers(app: Flask) -> None:
+    """Register all error handlers with the Flask application."""
+    # Custom application exceptions
+    app.register_error_handler(YouTubeCMSError, handle_youtube_cms_error)
+    app.register_error_handler(ValidationError, handle_validation_error)
+    
+    # Third-party exceptions  
+    app.register_error_handler(MarshmallowValidationError, handle_marshmallow_validation_error)
+    app.register_error_handler(SQLAlchemyError, handle_database_error)
+    app.register_error_handler(IntegrityError, handle_integrity_error)
+    
+    # HTTP exceptions
+    app.register_error_handler(404, handle_not_found)
+    app.register_error_handler(405, handle_method_not_allowed)
+    app.register_error_handler(500, handle_internal_error)
+    
+    # Catch-all for unexpected errors
+    app.register_error_handler(Exception, handle_unexpected_error)
+```
+
+**Standardized Error Response Format**:
+```json
+{
+  "status": "error",
+  "error_type": "validation_error",
+  "message": "Request validation failed",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/videos",
+  "method": "POST",
+  "details": {
+    "validation_errors": {
+      "field_name": ["error message"]
+    }
+  },
+  "request_id": "uuid-123-456",
+  "debug_info": {
+    "remote_addr": "127.0.0.1",
+    "user_agent": "Mozilla/5.0..."
+  }
+}
+```
+
+**Error Handler Features**:
+- **Custom Application Errors**: Handles all YouTubeCMSError subclasses with appropriate status codes
+- **Validation Errors**: Marshmallow schema validation with detailed field-level errors
+- **Database Errors**: SQLAlchemy exceptions with user-friendly messages and constraint parsing
+- **HTTP Errors**: Standard HTTP errors (404, 405, 500) with API-aware responses
+- **Debug Information**: Additional context in development mode
+- **Request Tracking**: Request path, method, and timing information
+- **Security**: Production-safe error messages that don't expose sensitive information
+
+**Specialized Error Handlers**:
+```python
+def handle_integrity_error(error: IntegrityError) -> Tuple[Dict[str, Any], int]:
+    """Handle database integrity constraint violations with user-friendly messages."""
+    # Parse common integrity errors
+    if 'duplicate key' in error_message.lower():
+        message = "A record with this information already exists"
+    elif 'foreign key' in error_message.lower():
+        message = "Referenced record does not exist"
+    elif 'not null' in error_message.lower():
+        message = "Required field is missing"
+```
+
+### Enhanced Logging Configuration (`app.py`)
+
+**Purpose**: Comprehensive logging system for debugging, monitoring, and audit trails.
+
+**Configuration**:
+```python
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('logs/youtube_cms.log', mode='a') if os.path.exists('logs') else logging.StreamHandler()
+    ]
 )
 ```
+
+**Logging Features**:
+- **Structured Logging**: Consistent format with timestamps, logger names, and levels
+- **File-based Logging**: Persistent logs written to `logs/youtube_cms.log`
+- **Fallback Handling**: Console output when log directory is unavailable  
+- **Context Preservation**: Error handlers include request context and stack traces
+- **Security Logging**: Audit trail for authentication and authorization events
+- **Performance Logging**: Database query performance and API response times
+
+**Integration with Error Handling**:
+- All exceptions automatically logged with appropriate severity levels
+- Structured extra data for log aggregation and analysis
+- Request context preservation for debugging
+- Stack trace capture for internal errors
+- Audit logging for security-relevant operations
 
 ## Performance Components
 

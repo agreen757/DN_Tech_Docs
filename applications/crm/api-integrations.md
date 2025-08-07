@@ -12,9 +12,14 @@ The Distro Nation CRM integrates with multiple APIs to provide comprehensive fun
 
 ```typescript
 export const dnApiConfig = {
-  apiKey: process.env.REACT_APP_DN_API_KEY || "your-dn-api-key-here",
+  apiKey: process.env.REACT_APP_DN_API_KEY,
   baseUrl: "https://<API_GATEWAY_ID_2>.execute-api.<REGION>.amazonaws.com/staging",
 };
+
+// SECURITY: Validate required environment variable
+if (!dnApiConfig.apiKey) {
+  throw new Error('REACT_APP_DN_API_KEY environment variable is required');
+}
 ```
 
 #### Primary Endpoints Used by CRM
@@ -214,9 +219,15 @@ Amplify.configure({
 
 ```typescript
 export const mailgunConfig = {
-  apiKey: process.env.REACT_APP_MAILGUN_API_KEY || "your-mailgun-api-key-here",
+  apiKey: process.env.REACT_APP_MAILGUN_API_KEY,
   domain: process.env.REACT_APP_MAILGUN_DOMAIN || "mg.distro-nation.com",
 };
+
+// SECURITY NOTE: API key must be provided via environment variables
+// Application will fail to initialize if REACT_APP_MAILGUN_API_KEY is not set
+if (!mailgunConfig.apiKey) {
+  throw new Error('REACT_APP_MAILGUN_API_KEY environment variable is required');
+}
 ```
 
 **Features Used**:
@@ -240,7 +251,12 @@ const sendEmail = async (emailData: EmailRequest) => {
 **API Key**: Stored in environment variables
 
 ```typescript
-export const openAIKey = process.env.REACT_APP_OPENAI_API_KEY || "your-openai-api-key";
+export const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+
+// SECURITY: Validate required environment variable
+if (!openAIKey) {
+  throw new Error('REACT_APP_OPENAI_API_KEY environment variable is required');
+}
 ```
 
 **Features Implemented**:
@@ -272,7 +288,12 @@ const generateSubjectLine = async (emailContent: string) => {
 **Quota Management**: 10,000 units per day
 
 ```typescript
-export const YOUTUBE_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY || "your-youtube-api-key";
+export const YOUTUBE_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY;
+
+// SECURITY: Validate required environment variable
+if (!YOUTUBE_API_KEY) {
+  throw new Error('REACT_APP_YOUTUBE_API_KEY environment variable is required');
+}
 ```
 
 **Data Retrieved**:
@@ -293,9 +314,14 @@ export const YOUTUBE_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY || "your-yo
 
 ```typescript
 export const spotifyConfig = {
-  clientId: process.env.REACT_APP_SPOTIFY_CLIENT_ID || "your-spotify-client-id",
-  clientSecret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET || "your-spotify-client-secret",
+  clientId: process.env.REACT_APP_SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET,
 };
+
+// SECURITY: Validate required environment variables
+if (!spotifyConfig.clientId || !spotifyConfig.clientSecret) {
+  throw new Error('REACT_APP_SPOTIFY_CLIENT_ID and REACT_APP_SPOTIFY_CLIENT_SECRET environment variables are required');
+}
 ```
 
 **Data Integration**:
@@ -326,8 +352,13 @@ const getSpotifyToken = async () => {
 
 ```typescript
 export const similarwebConfig = {
-  apiKey: process.env.REACT_APP_SIMILARWEB_API_KEY || "your-similarweb-api-key",
+  apiKey: process.env.REACT_APP_SIMILARWEB_API_KEY,
 };
+
+// SECURITY: Validate required environment variable
+if (!similarwebConfig.apiKey) {
+  throw new Error('REACT_APP_SIMILARWEB_API_KEY environment variable is required');
+}
 ```
 
 **Analytics Data**:
@@ -416,10 +447,13 @@ interface CacheConfig {
 ## Security Considerations
 
 ### API Key Management
-- **Environment Variables**: All API keys stored in environment variables
-- **Key Rotation**: Regular rotation schedule for sensitive keys
+- **Environment Variables Only**: All API keys MUST be stored in environment variables with NO fallback values
+- **No Hardcoded Keys**: Never commit API keys, tokens, or secrets to version control
+- **Key Rotation**: Regular rotation schedule for sensitive keys (quarterly minimum)
 - **Access Control**: Role-based access to different API endpoints
 - **Monitoring**: API key usage monitoring and alerting
+- **Validation**: Application startup validation ensures all required API keys are present
+- **Git History**: Regular scanning for accidentally committed secrets
 
 ### Data Protection
 - **Encryption in Transit**: All API communications use HTTPS/TLS
