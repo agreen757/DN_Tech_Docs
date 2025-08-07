@@ -84,7 +84,7 @@ External service integration patterns:
 
 - **YouTube Data API**: OAuth flow, token refresh, and API wrapper implementations
 - **AWS S3 Integration**: Boto3 usage patterns and error handling
-- **Database Connection**: Connection pooling and transaction management
+- **Database Connection**: Flask-Sqlalchemy connection pooling and transaction management
 - **Real-time Updates**: WebSocket event handling and broadcasting
 
 ## Development Best Practices Demonstrated
