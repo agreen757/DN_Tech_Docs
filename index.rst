@@ -27,7 +27,7 @@ This repository contains comprehensive technical documentation of the Distro Nat
    applications/crm/api-integrations.md
    applications/crm/development-setup.md
    applications/crm/data-flow-patterns.md
-   applications/crm/application-walkthrough.md
+   applications/crm/frontend-walkthrough.md
    applications/youtube-cms/backend-walkthrough.md
    applications/youtube-cms/frontend-walkthrough.md
    applications/youtube-cms/architecture-overview.md
