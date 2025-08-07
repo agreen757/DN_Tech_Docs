@@ -39,11 +39,10 @@ The video walkthrough covers the following technical aspects of the codebase:
 ### 3. YouTube API Integration Layer
 - **OAuth Authentication**: Secure token management and refresh mechanisms
 - **Metadata Synchronization**: Bidirectional sync between local DB and YouTube CMS
-- **Rate Limiting**: API rate limit handling and request optimization
 - **Error Handling**: Comprehensive error handling for API failures
 
 ### 4. S3 Report Processing System
-- **File Download**: Automated S3 report retrieval and processing
+- **File Download**: S3 report retrieval and processing
 - **CSV Parsing**: Data extraction and validation from uploaded reports
 - **Bulk Database Operations**: Efficient batch processing of large datasets
 - **Status Tracking**: Processing status monitoring and error reporting
@@ -60,7 +59,7 @@ The video walkthrough demonstrates the modular backend architecture:
 
 - **Service Layer Pattern**: Separation of business logic from route handlers
 - **Data Access Layer**: Repository pattern implementation for database operations
-- **Utility Modules**: Reusable components for S3, token management, and backups
+- **Utility Modules**: Components for S3, token management, and backups
 - **Configuration Management**: Environment-specific settings and secret handling
 
 ### Database Model Implementation
@@ -74,10 +73,10 @@ Detailed examination of the SQLAlchemy models:
 ### API Endpoint Architecture
 RESTful API design patterns demonstrated:
 
-- **CRUD Operations**: Complete video lifecycle management
-- **Bulk Operations**: Efficient batch processing endpoints
-- **Filtering & Pagination**: Complex query parameter handling
-- **Response Formatting**: Consistent JSON response structures
+- **CRUD Operations**: Video lifecycle management
+- **Bulk Operations**: Batch processing endpoints
+- **Filtering & Pagination**: Query parameter handling
+- **Response Formatting**: JSON response structures
 - **Error Handling**: Standardized error responses and logging
 
 ### Integration Layer Implementation
