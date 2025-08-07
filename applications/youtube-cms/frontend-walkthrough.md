@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive walkthrough of the YouTube Metadata Manager frontend interface. The system provides an intuitive web-based interface for the Distro Nation team to efficiently manage and update metadata for audio and video assets within YouTube's Content Management System (CMS).
+This document provides a walkthrough of the YouTube Metadata Manager frontend interface. The system provides a web-based interface for the Distro Nation team to efficiently manage and update metadata for audio and video assets within YouTube's Content Management System (CMS).
 
 ## Frontend User Interface Walkthrough
 
@@ -25,8 +25,7 @@ Watch this detailed walkthrough of the frontend interface and user experience:
 The video walkthrough demonstrates the following frontend components and functionality:
 
 ### 1. Main Dashboard Interface
-- **Video Grid Layout**: Comprehensive display of all managed videos with key metadata
-- **Responsive Design**: Mobile-friendly interface that adapts to different screen sizes
+- **Video Grid Layout**: Display of all managed videos with key metadata
 - **Data Tables**: Sortable columns with video information including title, artist, status
 - **Pagination Controls**: Navigate through large datasets efficiently
 - **Real-time Updates**: Live data updates without page refresh
@@ -111,7 +110,6 @@ The interface walkthrough showcases:
 - **Progressive Enhancement**: Graceful degradation for older browsers
 - **Performance Optimization**: Efficient loading and rendering
 - **Cross-browser Compatibility**: Support for modern web browsers
-- **Mobile-first Design**: Optimized for mobile devices
 - **Print Styles**: Print-friendly layouts for reports
 
 ## User Workflow Demonstrations
