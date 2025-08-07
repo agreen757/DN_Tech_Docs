@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive walkthrough of the YouTube Metadata Manager backend codebase. The system is a Flask-based Python application designed for the Distro Nation team to efficiently manage metadata for audio and video assets within YouTube's Content Management System (CMS).
+This document provides a walkthrough of the YouTube Metadata Manager backend codebase. The system is a Flask-based Python application designed for the Distro Nation team to manage metadata for audio and video assets within YouTube's Content Management System (CMS).
 
 ## Backend Code Architecture Walkthrough
 
