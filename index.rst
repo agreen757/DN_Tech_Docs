@@ -27,14 +27,20 @@ This repository contains comprehensive technical documentation of the Distro Nat
    applications/crm/api-integrations.md
    applications/crm/development-setup.md
    applications/crm/data-flow-patterns.md
-   applications/crm/frontend-walkthrough.md
-   applications/youtube-cms/backend-walkthrough.md
-   applications/youtube-cms/frontend-walkthrough.md
    applications/youtube-cms/architecture-overview.md
    applications/youtube-cms/component-catalog.md
    applications/youtube-cms/api-integrations.md
    applications/youtube-cms/development-setup.md
    applications/youtube-cms/data-flow-patterns.md
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Video Walkthroughs
+
+
+   applications/crm/frontend-walkthrough.md
+   applications/youtube-cms/backend-walkthrough.md
+   applications/youtube-cms/frontend-walkthrough.md
 
 .. toctree::
    :maxdepth: 2
