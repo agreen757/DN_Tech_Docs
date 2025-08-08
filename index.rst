@@ -27,6 +27,11 @@ This repository contains comprehensive technical documentation of the Distro Nat
    applications/crm/api-integrations.md
    applications/crm/development-setup.md
    applications/crm/data-flow-patterns.md
+   applications/fuga-wav-uploader/architecture-overview.md
+   applications/fuga-wav-uploader/component-catalog.md
+   applications/fuga-wav-uploader/api-integrations.md
+   applications/fuga-wav-uploader/development-setup.md
+   applications/fuga-wav-uploader/data-flow-patterns.md
    applications/youtube-cms/architecture-overview.md
    applications/youtube-cms/component-catalog.md
    applications/youtube-cms/api-integrations.md
@@ -39,6 +44,7 @@ This repository contains comprehensive technical documentation of the Distro Nat
 
 
    applications/crm/frontend-walkthrough.md
+   applications/fuga-wav-uploader/fuga-walkthrough.md
    applications/youtube-cms/backend-walkthrough.md
    applications/youtube-cms/frontend-walkthrough.md
 
