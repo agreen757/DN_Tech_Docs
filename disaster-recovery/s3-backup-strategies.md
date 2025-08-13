@@ -1,11 +1,13 @@
 # S3 Storage Backup and Versioning Strategies
 
 ## Overview
+
 This document outlines comprehensive backup and versioning strategies for Amazon S3 storage across Distro Nation's 23+ S3 buckets, ensuring data protection, compliance, and rapid recovery capabilities for all stored assets including audio files, user uploads, profile pictures, and application data.
 
 ## Executive Summary
 
 ### Current S3 Infrastructure
+
 ```yaml
 Total Buckets: 23+ buckets
 Storage Usage: ~709 GB across all buckets
@@ -19,6 +21,7 @@ Key Buckets:
 ```
 
 ### Backup Strategy Summary
+
 - **Versioning**: Enabled on critical buckets with lifecycle management
 - **Cross-Region Replication**: Implemented for business-critical data
 - **Lifecycle Policies**: Automated transition to cost-effective storage classes
@@ -30,6 +33,7 @@ Key Buckets:
 ### 1.1 Bucket Risk Assessment
 
 #### Critical Buckets (Tier 1) - Zero Data Loss Tolerance
+
 ```yaml
 distronation-audio:
   Purpose: Audio file storage for music distribution
@@ -37,14 +41,14 @@ distronation-audio:
   Growth Rate: ~50GB/month
   Business Impact: HIGH - Revenue generating content
   Backup Strategy: Versioning + Cross-region replication + Glacier backup
-  
+
 distro-nation-upload:
   Purpose: User file uploads and content submission
-  Current Size: ~200GB  
+  Current Size: ~200GB
   Growth Rate: ~20GB/month
   Business Impact: HIGH - User generated content
   Backup Strategy: Versioning + Cross-region replication + Intelligent tiering
-  
+
 distronationfm-profile-pictures:
   Purpose: User profile images and avatars
   Current Size: ~10GB
@@ -54,13 +58,14 @@ distronationfm-profile-pictures:
 ```
 
 #### Important Buckets (Tier 2) - Limited Data Loss Acceptable
+
 ```yaml
 distronation-reporting:
   Purpose: Analytics data and business intelligence
   Current Size: ~50GB (estimated)
   Business Impact: MEDIUM - Can be regenerated
   Backup Strategy: Lifecycle policies + Standard-IA backup
-  
+
 amplify-* buckets:
   Purpose: Application deployment artifacts
   Current Size: Various
@@ -69,12 +74,13 @@ amplify-* buckets:
 ```
 
 #### Utility Buckets (Tier 3) - Data Loss Acceptable
+
 ```yaml
 distronation-backup:
   Purpose: Backup storage for other systems
   Business Impact: LOW - Secondary backup location
   Backup Strategy: Basic lifecycle management
-  
+
 CloudFormation/CDK buckets:
   Purpose: Infrastructure deployment artifacts
   Business Impact: LOW - Regenerable from source
@@ -84,6 +90,7 @@ CloudFormation/CDK buckets:
 ### 1.2 Storage Class Strategy
 
 #### Intelligent Tiering Implementation
+
 ```json
 {
   "Rules": [
@@ -130,6 +137,7 @@ CloudFormation/CDK buckets:
 ### 2.1 Critical Bucket Versioning
 
 #### Enable Versioning on Critical Buckets
+
 ```bash
 #!/bin/bash
 # enable-s3-versioning.sh
@@ -137,19 +145,19 @@ CloudFormation/CDK buckets:
 
 CRITICAL_BUCKETS=(
   "distronation-audio"
-  "distro-nation-upload" 
+  "distro-nation-upload"
   "distronationfm-profile-pictures"
   "distronation-reporting"
 )
 
 for bucket in "${CRITICAL_BUCKETS[@]}"; do
   echo "Enabling versioning on bucket: $bucket"
-  
+
   # Enable versioning
   aws s3api put-bucket-versioning \
     --bucket "$bucket" \
     --versioning-configuration Status=Enabled
-    
+
   # Enable MFA delete protection for critical buckets
   if [[ "$bucket" == "distronation-audio" || "$bucket" == "distro-nation-upload" ]]; then
     aws s3api put-bucket-versioning \
@@ -157,7 +165,7 @@ for bucket in "${CRITICAL_BUCKETS[@]}"; do
       --versioning-configuration Status=Enabled,MFADelete=Enabled \
       --mfa "arn:aws:iam::<AWS_ACCOUNT_ID>:mfa/your-mfa-device 123456"
   fi
-  
+
   echo "Versioning enabled for $bucket"
 done
 ```
@@ -165,6 +173,7 @@ done
 ### 2.2 Version Lifecycle Management
 
 #### Automated Version Cleanup
+
 ```json
 {
   "Rules": [
@@ -193,15 +202,16 @@ done
 ```
 
 #### Apply Lifecycle Configuration
+
 ```bash
 # Apply lifecycle configuration to buckets
 for bucket in "${CRITICAL_BUCKETS[@]}"; do
   echo "Applying lifecycle configuration to: $bucket"
-  
+
   aws s3api put-bucket-lifecycle-configuration \
     --bucket "$bucket" \
     --lifecycle-configuration file://lifecycle-config.json
-    
+
   echo "Lifecycle configuration applied to $bucket"
 done
 ```
@@ -211,6 +221,7 @@ done
 ### 3.1 Replication Configuration
 
 #### Create Cross-Region Replication Role
+
 ```bash
 # Create IAM role for cross-region replication
 aws iam create-role \
@@ -235,6 +246,7 @@ aws iam attach-role-policy \
 ```
 
 #### Configure Replication for Critical Buckets
+
 ```bash
 #!/bin/bash
 # setup-cross-region-replication.sh
@@ -246,18 +258,18 @@ ROLE_ARN="arn:aws:iam::<AWS_ACCOUNT_ID>:role/S3-CrossRegion-Replication-Role"
 setup_replication() {
   local source_bucket=$1
   local dest_bucket="${source_bucket}-backup-${DEST_REGION}"
-  
+
   # Create destination bucket
   aws s3api create-bucket \
     --bucket "$dest_bucket" \
     --region "$DEST_REGION" \
     --create-bucket-configuration LocationConstraint="$DEST_REGION"
-    
+
   # Enable versioning on destination bucket
   aws s3api put-bucket-versioning \
     --bucket "$dest_bucket" \
     --versioning-configuration Status=Enabled
-    
+
   # Configure replication
   aws s3api put-bucket-replication \
     --bucket "$source_bucket" \
@@ -290,7 +302,7 @@ setup_replication() {
         }
       ]
     }'
-    
+
   echo "Replication configured: $source_bucket -> $dest_bucket"
 }
 
@@ -302,6 +314,7 @@ setup_replication "distro-nation-upload"
 ### 3.2 Replication Monitoring
 
 #### CloudWatch Metrics for Replication
+
 ```bash
 # Create CloudWatch alarm for replication failures
 aws cloudwatch put-metric-alarm \
@@ -335,6 +348,7 @@ aws cloudwatch put-metric-alarm \
 ### 4.1 Point-in-Time Recovery
 
 #### Object Version Recovery
+
 ```bash
 #!/bin/bash
 # s3-object-recovery.sh
@@ -345,16 +359,16 @@ recover_object_version() {
   local object_key=$2
   local version_id=$3
   local recovery_location=$4
-  
+
   echo "Recovering object: s3://$bucket/$object_key (version: $version_id)"
-  
+
   # Download specific version
   aws s3api get-object \
     --bucket "$bucket" \
     --key "$object_key" \
     --version-id "$version_id" \
     "$recovery_location"
-    
+
   if [ $? -eq 0 ]; then
     echo "SUCCESS: Object recovered to $recovery_location"
   else
@@ -367,9 +381,9 @@ recover_object_version() {
 list_object_versions() {
   local bucket=$1
   local prefix=$2
-  
+
   echo "Listing versions for s3://$bucket/$prefix*"
-  
+
   aws s3api list-object-versions \
     --bucket "$bucket" \
     --prefix "$prefix" \
@@ -383,6 +397,7 @@ list_object_versions() {
 ```
 
 #### Bulk Recovery Operations
+
 ```bash
 #!/bin/bash
 # bulk-s3-recovery.sh
@@ -393,19 +408,19 @@ bulk_recovery() {
   local prefix=$2
   local recovery_time=$3  # ISO 8601 format
   local destination_bucket=$4
-  
+
   echo "Starting bulk recovery for s3://$bucket/$prefix* before $recovery_time"
-  
+
   # Get object versions before the specified time
   aws s3api list-object-versions \
     --bucket "$bucket" \
     --prefix "$prefix" \
     --query "Versions[?LastModified<='$recovery_time'].[Key,VersionId]" \
     --output text | while read key version_id; do
-    
+
     if [ -n "$key" ] && [ -n "$version_id" ]; then
       echo "Recovering: $key (version: $version_id)"
-      
+
       # Copy version to destination bucket
       aws s3api copy-object \
         --copy-source "$bucket/$key?versionId=$version_id" \
@@ -413,7 +428,7 @@ bulk_recovery() {
         --key "recovered-$(date +%Y%m%d)/$key"
     fi
   done
-  
+
   echo "Bulk recovery completed"
 }
 
@@ -424,6 +439,7 @@ bulk_recovery() {
 ### 4.2 Cross-Region Recovery
 
 #### Failover to Replica Region
+
 ```bash
 #!/bin/bash
 # s3-cross-region-failover.sh
@@ -433,24 +449,24 @@ failover_to_replica() {
   local primary_bucket=$1
   local replica_region="us-west-2"
   local replica_bucket="${primary_bucket}-backup-${replica_region}"
-  
+
   echo "Initiating failover from $primary_bucket to $replica_bucket"
-  
+
   # Verify replica bucket accessibility
   aws s3api head-bucket --bucket "$replica_bucket" --region "$replica_region"
-  
+
   if [ $? -eq 0 ]; then
     echo "Replica bucket accessible: $replica_bucket"
-    
+
     # Update application configuration to use replica bucket
     # This would typically involve updating Lambda environment variables,
     # API Gateway configurations, etc.
-    
+
     # Example: Update Lambda function environment variables
     aws lambda update-function-configuration \
       --function-name "your-lambda-function" \
       --environment Variables="{S3_BUCKET=$replica_bucket,S3_REGION=$replica_region}"
-      
+
     echo "Failover completed - applications now using replica bucket"
   else
     echo "ERROR: Replica bucket not accessible"
@@ -462,18 +478,18 @@ failover_to_replica() {
 failback_to_primary() {
   local primary_bucket=$1
   local primary_region="<REGION>"
-  
+
   echo "Initiating failback to primary bucket: $primary_bucket"
-  
+
   # Verify primary bucket accessibility
   aws s3api head-bucket --bucket "$primary_bucket" --region "$primary_region"
-  
+
   if [ $? -eq 0 ]; then
     # Update applications back to primary bucket
     aws lambda update-function-configuration \
       --function-name "your-lambda-function" \
       --environment Variables="{S3_BUCKET=$primary_bucket,S3_REGION=$primary_region}"
-      
+
     echo "Failback completed - applications restored to primary bucket"
   else
     echo "ERROR: Primary bucket not yet accessible"
@@ -487,6 +503,7 @@ failback_to_primary() {
 ### 5.1 Automated Integrity Checking
 
 #### S3 Object Integrity Validation
+
 ```python
 #!/usr/bin/env python3
 # s3-integrity-check.py
@@ -508,9 +525,9 @@ def calculate_s3_etag(file_path, chunk_size=8388608):
 def validate_bucket_integrity(bucket_name, prefix="", sample_size=100):
     """Validate object integrity for a sample of objects in bucket"""
     s3 = boto3.client('s3')
-    
+
     print(f"Starting integrity check for bucket: {bucket_name}")
-    
+
     try:
         # List objects in bucket
         response = s3.list_objects_v2(
@@ -518,37 +535,37 @@ def validate_bucket_integrity(bucket_name, prefix="", sample_size=100):
             Prefix=prefix,
             MaxKeys=sample_size
         )
-        
+
         if 'Contents' not in response:
             print(f"No objects found in bucket {bucket_name}")
             return True
-            
+
         objects = response['Contents']
         total_objects = len(objects)
         valid_objects = 0
-        
+
         for obj in objects:
             key = obj['Key']
-            
+
             try:
                 # Get object metadata
                 head_response = s3.head_object(Bucket=bucket_name, Key=key)
-                
+
                 # Check if object has integrity metadata
                 if 'ChecksumSHA256' in head_response:
                     print(f"✓ Object {key} has integrity checksum")
                     valid_objects += 1
                 else:
                     print(f"⚠ Object {key} missing integrity checksum")
-                    
+
             except Exception as e:
                 print(f"✗ Error checking object {key}: {str(e)}")
-                
+
         success_rate = (valid_objects / total_objects) * 100
         print(f"Integrity check completed: {success_rate:.1f}% objects validated")
-        
+
         return success_rate > 95  # Consider successful if >95% objects valid
-        
+
     except Exception as e:
         print(f"Error during integrity check: {str(e)}")
         return False
@@ -557,34 +574,34 @@ def compare_cross_region_integrity(primary_bucket, replica_bucket):
     """Compare object integrity between primary and replica buckets"""
     s3_primary = boto3.client('s3', region_name='<REGION>')
     s3_replica = boto3.client('s3', region_name='us-west-2')
-    
+
     print(f"Comparing integrity: {primary_bucket} vs {replica_bucket}")
-    
+
     # Get object lists from both buckets
     primary_objects = s3_primary.list_objects_v2(Bucket=primary_bucket)
     replica_objects = s3_replica.list_objects_v2(Bucket=replica_bucket)
-    
+
     primary_keys = {obj['Key']: obj['ETag'] for obj in primary_objects.get('Contents', [])}
     replica_keys = {obj['Key']: obj['ETag'] for obj in replica_objects.get('Contents', [])}
-    
+
     # Find mismatches
     mismatches = []
     missing_in_replica = []
-    
+
     for key, etag in primary_keys.items():
         if key not in replica_keys:
             missing_in_replica.append(key)
         elif replica_keys[key] != etag:
             mismatches.append(key)
-    
+
     print(f"Objects missing in replica: {len(missing_in_replica)}")
     print(f"Objects with mismatched ETags: {len(mismatches)}")
-    
+
     if missing_in_replica:
         print("Missing objects:", missing_in_replica[:10])  # Show first 10
     if mismatches:
         print("Mismatched objects:", mismatches[:10])  # Show first 10
-    
+
     return len(missing_in_replica) == 0 and len(mismatches) == 0
 
 # Weekly integrity check for critical buckets
@@ -594,16 +611,16 @@ def weekly_integrity_check():
         'distro-nation-upload',
         'distronationfm-profile-pictures'
     ]
-    
+
     results = {}
     overall_success = True
-    
+
     for bucket in critical_buckets:
         print(f"\n--- Checking bucket: {bucket} ---")
         bucket_result = validate_bucket_integrity(bucket)
         results[bucket] = bucket_result
         overall_success = overall_success and bucket_result
-    
+
     # Generate report
     report = {
         'timestamp': datetime.now().isoformat(),
@@ -611,11 +628,11 @@ def weekly_integrity_check():
         'bucket_results': results,
         'next_check': (datetime.now() + timedelta(days=7)).isoformat()
     }
-    
+
     # Save report
     with open(f'/var/log/s3-integrity-{datetime.now().strftime("%Y%m%d")}.json', 'w') as f:
         json.dump(report, f, indent=2)
-    
+
     return overall_success
 
 if __name__ == "__main__":
@@ -626,6 +643,7 @@ if __name__ == "__main__":
 ### 5.2 Backup Validation
 
 #### Automated Backup Testing
+
 ```bash
 #!/bin/bash
 # s3-backup-validation.sh
@@ -638,12 +656,12 @@ echo "Starting S3 backup validation - $(date)" >> $LOG_FILE
 
 validate_versioning() {
   local bucket=$1
-  
+
   echo "Validating versioning for bucket: $bucket" >> $LOG_FILE
-  
+
   # Check if versioning is enabled
   versioning_status=$(aws s3api get-bucket-versioning --bucket "$bucket" --query 'Status' --output text)
-  
+
   if [ "$versioning_status" = "Enabled" ]; then
     echo "✓ Versioning enabled for $bucket" >> $LOG_FILE
     return 0
@@ -655,12 +673,12 @@ validate_versioning() {
 
 validate_replication() {
   local bucket=$1
-  
+
   echo "Validating replication for bucket: $bucket" >> $LOG_FILE
-  
+
   # Check replication configuration
   aws s3api get-bucket-replication --bucket "$bucket" > /dev/null 2>&1
-  
+
   if [ $? -eq 0 ]; then
     echo "✓ Cross-region replication configured for $bucket" >> $LOG_FILE
     return 0
@@ -673,38 +691,38 @@ validate_replication() {
 test_recovery() {
   local bucket=$1
   local test_file="backup-test-$(date +%Y%m%d-%H%M%S).txt"
-  
+
   echo "Testing recovery capability for bucket: $bucket" >> $LOG_FILE
-  
+
   # Create test file
   echo "Backup test file created at $(date)" > "/tmp/$test_file"
-  
+
   # Upload test file
   aws s3 cp "/tmp/$test_file" "s3://$bucket/backup-tests/$test_file"
-  
+
   # Wait a moment for versioning
   sleep 5
-  
+
   # Modify test file
   echo "Modified at $(date)" >> "/tmp/$test_file"
   aws s3 cp "/tmp/$test_file" "s3://$bucket/backup-tests/$test_file"
-  
+
   # List versions
   versions=$(aws s3api list-object-versions \
     --bucket "$bucket" \
     --prefix "backup-tests/$test_file" \
     --query 'Versions[].VersionId' \
     --output text)
-  
+
   version_count=$(echo $versions | wc -w)
-  
+
   if [ $version_count -ge 2 ]; then
     echo "✓ Version recovery test passed for $bucket ($version_count versions)" >> $LOG_FILE
-    
+
     # Cleanup test files
     aws s3 rm "s3://$bucket/backup-tests/$test_file"
     rm "/tmp/$test_file"
-    
+
     return 0
   else
     echo "✗ Version recovery test failed for $bucket" >> $LOG_FILE
@@ -718,7 +736,7 @@ overall_success=true
 
 for bucket in "${CRITICAL_BUCKETS[@]}"; do
   echo "--- Validating bucket: $bucket ---" >> $LOG_FILE
-  
+
   if validate_versioning "$bucket" && test_recovery "$bucket"; then
     echo "✓ All tests passed for $bucket" >> $LOG_FILE
   else
@@ -748,12 +766,13 @@ echo "S3 backup validation completed - $(date)" >> $LOG_FILE
 ### 6.1 Storage Cost Analysis
 
 #### Current Cost Breakdown
+
 ```yaml
 Current S3 Costs: $16.61/month
   Standard Storage: $16.31 (709 GB @ $0.023/GB-month)
   PUT Requests: $0.30 (60,019 requests)
   GET Requests: $0.00 (within free tier)
-  
+
 Optimization Potential:
   Intelligent Tiering: Save 20-30% on storage costs
   Lifecycle Policies: Save 40-60% on archived data
@@ -761,6 +780,7 @@ Optimization Potential:
 ```
 
 #### Storage Class Optimization
+
 ```bash
 #!/bin/bash
 # optimize-storage-costs.sh
@@ -768,9 +788,9 @@ Optimization Potential:
 
 apply_intelligent_tiering() {
   local bucket=$1
-  
+
   echo "Applying Intelligent Tiering to bucket: $bucket"
-  
+
   # Apply intelligent tiering configuration
   aws s3api put-bucket-intelligent-tiering-configuration \
     --bucket "$bucket" \
@@ -781,7 +801,7 @@ apply_intelligent_tiering() {
       "Filter": {},
       "OptionalFields": ["BucketKeyStatus"]
     }'
-    
+
   echo "Intelligent Tiering applied to $bucket"
 }
 
@@ -796,6 +816,7 @@ done
 ### 6.2 Lifecycle Cost Management
 
 #### Automated Cost Reporting
+
 ```python
 #!/usr/bin/env python3
 # s3-cost-analysis.py
@@ -809,11 +830,11 @@ def analyze_bucket_costs(bucket_name):
     """Analyze storage costs for a specific bucket"""
     s3 = boto3.client('s3')
     cloudwatch = boto3.client('cloudwatch')
-    
+
     # Get bucket storage metrics
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(days=30)
-    
+
     storage_metrics = cloudwatch.get_metric_statistics(
         Namespace='AWS/S3',
         MetricName='BucketSizeBytes',
@@ -826,25 +847,25 @@ def analyze_bucket_costs(bucket_name):
         Period=86400,  # Daily
         Statistics=['Average']
     )
-    
+
     if storage_metrics['Datapoints']:
         latest_size = storage_metrics['Datapoints'][-1]['Average']
         size_gb = latest_size / (1024**3)
         monthly_cost = size_gb * 0.023  # Standard storage pricing
-        
+
         return {
             'bucket': bucket_name,
             'size_gb': round(size_gb, 2),
             'monthly_cost': round(monthly_cost, 2),
             'storage_class_recommendations': get_storage_recommendations(bucket_name, size_gb)
         }
-    
+
     return None
 
 def get_storage_recommendations(bucket_name, size_gb):
     """Get storage class recommendations based on bucket usage patterns"""
     recommendations = []
-    
+
     # Analyze access patterns (simplified)
     if 'audio' in bucket_name.lower():
         recommendations.append({
@@ -852,30 +873,30 @@ def get_storage_recommendations(bucket_name, size_gb):
             'estimated_savings': '60-70%',
             'description': 'Archive older audio files to Glacier'
         })
-    
+
     if 'upload' in bucket_name.lower():
         recommendations.append({
             'strategy': 'Intelligent Tiering',
             'estimated_savings': '20-30%',
             'description': 'Automatically optimize based on access patterns'
         })
-    
+
     if size_gb > 100:
         recommendations.append({
             'strategy': 'Standard-IA after 30 days',
             'estimated_savings': '40-50%',
             'description': 'Move infrequently accessed data to Standard-IA'
         })
-    
+
     return recommendations
 
 def generate_cost_report():
     """Generate comprehensive S3 cost analysis report"""
     s3 = boto3.client('s3')
-    
+
     # Get all buckets
     buckets = s3.list_buckets()['Buckets']
-    
+
     report = {
         'generated_at': datetime.now().isoformat(),
         'total_buckets': len(buckets),
@@ -886,19 +907,19 @@ def generate_cost_report():
             'optimization_opportunities': []
         }
     }
-    
+
     for bucket in buckets:
         bucket_name = bucket['Name']
         analysis = analyze_bucket_costs(bucket_name)
-        
+
         if analysis:
             report['bucket_analysis'].append(analysis)
             report['optimization_summary']['total_monthly_cost'] += analysis['monthly_cost']
-    
+
     # Calculate potential savings
     total_cost = report['optimization_summary']['total_monthly_cost']
     potential_savings = total_cost * 0.25  # Conservative 25% savings estimate
-    
+
     report['optimization_summary']['potential_savings'] = round(potential_savings, 2)
     report['optimization_summary']['optimization_opportunities'] = [
         'Implement Intelligent Tiering on large buckets',
@@ -906,11 +927,11 @@ def generate_cost_report():
         'Set up lifecycle policies for automated transitions',
         'Review and optimize cross-region replication'
     ]
-    
+
     # Save report
     with open(f'/var/log/s3-cost-analysis-{datetime.now().strftime("%Y%m%d")}.json', 'w') as f:
         json.dump(report, f, indent=2)
-    
+
     return report
 
 if __name__ == "__main__":
@@ -925,6 +946,7 @@ if __name__ == "__main__":
 ### 7.1 CloudWatch Monitoring
 
 #### S3 Backup Health Monitoring
+
 ```bash
 # Create comprehensive S3 monitoring alarms
 aws cloudwatch put-metric-alarm \
@@ -957,6 +979,7 @@ aws cloudwatch put-metric-alarm \
 ### 7.2 Custom Metrics and Dashboards
 
 #### S3 Backup Dashboard Configuration
+
 ```json
 {
   "widgets": [
@@ -964,7 +987,14 @@ aws cloudwatch put-metric-alarm \
       "type": "metric",
       "properties": {
         "metrics": [
-          ["AWS/S3", "BucketSizeBytes", "BucketName", "distronation-audio", "StorageType", "StandardStorage"],
+          [
+            "AWS/S3",
+            "BucketSizeBytes",
+            "BucketName",
+            "distronation-audio",
+            "StorageType",
+            "StandardStorage"
+          ],
           ["...", "distro-nation-upload", ".", "."],
           ["...", "distronationfm-profile-pictures", ".", "."]
         ],
@@ -983,7 +1013,12 @@ aws cloudwatch put-metric-alarm \
       "type": "metric",
       "properties": {
         "metrics": [
-          ["AWS/S3", "ReplicationLatency", "SourceBucket", "distronation-audio"],
+          [
+            "AWS/S3",
+            "ReplicationLatency",
+            "SourceBucket",
+            "distronation-audio"
+          ],
           ["...", "distro-nation-upload"]
         ],
         "period": 300,
@@ -999,6 +1034,7 @@ aws cloudwatch put-metric-alarm \
 ## 8. Implementation Timeline
 
 ### Phase 1: Critical Infrastructure (Week 1)
+
 ```yaml
 ✅ Document current S3 backup strategies
 ⏳ Enable versioning on critical buckets
@@ -1007,6 +1043,7 @@ aws cloudwatch put-metric-alarm \
 ```
 
 ### Phase 2: Cross-Region Protection (Week 2)
+
 ```yaml
 ⏳ Implement cross-region replication for critical buckets
 ⏳ Create replication monitoring and alerting
@@ -1015,6 +1052,7 @@ aws cloudwatch put-metric-alarm \
 ```
 
 ### Phase 3: Automation and Testing (Week 3-4)
+
 ```yaml
 ⏳ Implement automated backup validation
 ⏳ Create integrity checking scripts
@@ -1025,16 +1063,11 @@ aws cloudwatch put-metric-alarm \
 ## Next Steps
 
 ### Immediate Actions
+
 1. ✅ Complete S3 backup strategy documentation
 2. ⏳ Implement versioning on critical buckets
 3. ⏳ Set up cross-region replication
 4. ⏳ Configure monitoring and alerting
-
-### Integration with Empire Standards
-1. ⏳ Align with Empire backup retention policies
-2. ⏳ Integrate with Empire disaster recovery procedures
-3. ⏳ Standardize monitoring and reporting
-4. ⏳ Implement Empire security and compliance requirements
 
 ---
 
@@ -1044,4 +1077,4 @@ aws cloudwatch put-metric-alarm \
 **Owner**: Adrian Green, Head of Engineering  
 **Status**: Phase 1 Implementation
 
-*This document contains critical backup and recovery procedures for S3 storage. All team members should be familiar with these procedures.*
+_This document contains critical backup and recovery procedures for S3 storage. All team members should be familiar with these procedures._
