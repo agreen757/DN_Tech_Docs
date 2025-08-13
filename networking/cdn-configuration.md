@@ -643,7 +643,7 @@ Invalidation Patterns:
     Time to Complete: 10-15 minutes globally
 ```
 
-## Empire Distribution Integration
+## CDN Distribution Overview
 
 ### CDN Consolidation Strategy
 ```yaml
