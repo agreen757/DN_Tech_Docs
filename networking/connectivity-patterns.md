@@ -1,7 +1,7 @@
 # Network Connectivity Patterns
 
 ## Overview
-This document provides comprehensive documentation of network connectivity patterns and service-to-service communication within Distro Nation's infrastructure. Understanding these patterns is critical for troubleshooting, performance optimization, and integration planning with Empire Distribution.
+This document provides comprehensive documentation of network connectivity patterns and service-to-service communication within Distro Nation's infrastructure. Understanding these patterns is critical for troubleshooting, performance optimization, and integration planning with Distro Nation.
 
 ## Service Communication Architecture
 
@@ -435,14 +435,14 @@ Alerting Thresholds:
   Database Connection Issues: Connection pool exhaustion
 ```
 
-## Empire Distribution Integration Planning
+## Distro Nation Integration Planning
 
 ### Connectivity Assessment for Integration
 ```yaml
 Phase 1 - Network Discovery (Weeks 1-2):
   Tasks:
     - Document all current connectivity patterns
-    - Identify integration touchpoints with Empire systems
+    - Identify integration touchpoints with Distro Nation systems
     - Assess network security requirements
     - Map data flow dependencies
     
@@ -505,6 +505,6 @@ Shared Service Patterns:
 **Document Version**: 1.0  
 **Last Updated**: July 24, 2025  
 **Prepared By**: Adrian Green, Head of Engineering  
-**Review Status**: Ready for Empire Distribution technical review
+**Review Status**: Ready for Distro Nation technical review
 
 *This document contains detailed network connectivity information. Access is restricted to authorized technical personnel involved in the acquisition integration planning.*

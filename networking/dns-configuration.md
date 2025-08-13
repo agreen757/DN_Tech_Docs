@@ -435,50 +435,7 @@ DNS Cost Reduction:
      - Potential Savings: $1-2/month per zone
 ```
 
-## Empire Distribution Integration
 
-### DNS Integration Strategy
-```yaml
-Phase 1 - DNS Assessment and Planning (Weeks 1-2):
-  Tasks:
-    - Complete DNS zone inventory and configuration audit
-    - Document all DNS records and their purposes
-    - Identify integration requirements with Empire domains
-    - Plan domain consolidation and standardization
-    
-Phase 2 - DNS Enhancement and Optimization (Weeks 3-4):
-  Tasks:
-    - Implement health checks and monitoring
-    - Enable DNS query logging and analytics
-    - Optimize TTL values for performance
-    - Deploy SSL certificate automation
-    
-Phase 3 - Empire Integration (Weeks 5-8):
-  Tasks:
-    - Coordinate domain management with Empire IT
-    - Implement cross-domain DNS resolution
-    - Deploy unified SSL certificate management
-    - Establish DNS change management procedures
-```
-
-### Cross-Account DNS Management
-```yaml
-Empire DNS Integration Options:
-  Option 1 - Subdomain Delegation:
-    Approach: Empire manages parent domain, Distro Nation manages subdomains
-    Example: distronation.empire.com delegation
-    Benefits: Operational independence, clear boundaries
-    
-  Option 2 - Cross-Account Zone Sharing:
-    Approach: Shared access to Route53 zones
-    Implementation: IAM cross-account roles
-    Benefits: Unified DNS management, centralized control
-    
-  Option 3 - DNS Federation:
-    Approach: Separate domains with cross-references
-    Implementation: CNAME records and API integration
-    Benefits: Brand preservation, technical isolation
-```
 
 ## Troubleshooting and Diagnostics
 
@@ -558,6 +515,6 @@ AWS CLI Diagnostics:
 **Document Version**: 1.0  
 **Last Updated**: July 24, 2025  
 **Prepared By**: Adrian Green, Head of Engineering  
-**Review Status**: Ready for Empire Distribution technical review
+**Review Status**: Ready for Distro Nation technical review
 
 *This document contains detailed DNS configuration information. Access is restricted to authorized technical personnel involved in the acquisition integration planning.*

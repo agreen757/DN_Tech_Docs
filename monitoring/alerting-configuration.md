@@ -644,52 +644,7 @@ Alerting System Performance:
     - Implement efficient metric collection strategies
 ```
 
-## Empire Distribution Integration
 
-### Alerting Consolidation Strategy
-```yaml
-Phase 1 - Alert Inventory and Assessment (Week 1):
-  Tasks:
-    - Complete alarm configuration audit
-    - Document notification channels and recipients
-    - Assess alert effectiveness and false positive rates
-    - Map alerting to business impact priorities
-    
-Phase 2 - Integration Planning (Week 2):
-  Tasks:
-    - Design unified alerting architecture with Empire
-    - Plan cross-account alarm sharing
-    - Establish consolidated incident response procedures
-    - Design unified notification and escalation workflows
-    
-Phase 3 - Implementation (Week 3-4):
-  Tasks:
-    - Implement cross-account alerting access
-    - Deploy unified incident management system
-    - Establish shared on-call rotations and escalation
-    - Create consolidated alerting dashboards
-```
-
-### Cross-Account Alerting
-```yaml
-Empire Integration Architecture:
-  Shared Alerting Platform:
-    Option 1: CloudWatch cross-account alarm sharing
-    Option 2: Third-party incident management (PagerDuty, Opsgenie)
-    Option 3: Custom notification aggregation system
-    
-  Unified Escalation:
-    - Shared on-call schedules
-    - Cross-team escalation procedures
-    - Consolidated incident command structure
-    - Empire-wide incident communication protocols
-    
-  Alert Standardization:
-    - Common alerting thresholds and criteria
-    - Standardized alert severity definitions
-    - Unified alert message formats
-    - Consistent notification timing and channels
-```
 
 ## Related Documentation
 - [CloudWatch Metrics](./cloudwatch-metrics.md)
@@ -703,6 +658,6 @@ Empire Integration Architecture:
 **Document Version**: 1.0  
 **Last Updated**: July 24, 2025  
 **Prepared By**: Adrian Green, Head of Engineering  
-**Review Status**: Ready for Empire Distribution technical review
+**Review Status**: Ready for Distro Nation technical review
 
 *This document contains detailed alerting configuration information. Access is restricted to authorized technical personnel involved in the acquisition integration planning.*

@@ -1,11 +1,13 @@
 # Infrastructure as Code Backup and Deployment Procedures
 
 ## Overview
+
 This document provides comprehensive backup and deployment procedures for Infrastructure as Code (IaC) templates, configurations, and automated deployment pipelines used in Distro Nation's AWS and Firebase infrastructure. This ensures rapid infrastructure recovery and maintains deployment consistency across environments.
 
 ## Executive Summary
 
 ### Infrastructure as Code Inventory
+
 ```yaml
 IaC Technologies in Use:
   - AWS CloudFormation: Primary infrastructure provisioning
@@ -23,6 +25,7 @@ Current Deployment Pattern:
 ```
 
 ### Backup Strategy Overview
+
 - **Source Code**: Git version control with multiple remote repositories
 - **CloudFormation Templates**: Automated template backup and state management
 - **CDK Applications**: Source code backup with synthesized template archives
@@ -34,6 +37,7 @@ Current Deployment Pattern:
 ### 1.1 Git Repository Backup Strategy
 
 #### Multi-Remote Repository Configuration
+
 ```bash
 #!/bin/bash
 # setup-git-backup-remotes.sh
@@ -63,6 +67,7 @@ git remote -v
 ```
 
 #### Automated Repository Backup Script
+
 ```bash
 #!/bin/bash
 # git-repository-backup.sh
@@ -89,7 +94,7 @@ cd "$BACKUP_DIR"
 # Export all branches
 git --git-dir=infrastructure-repo.git branch -a > branches.txt
 
-# Export all tags  
+# Export all tags
 git --git-dir=infrastructure-repo.git tag -l > tags.txt
 
 # Export commit history summary
@@ -110,8 +115,8 @@ echo "Creating infrastructure inventory..."
 cat > "$BACKUP_DIR/infrastructure-inventory.md" << EOF
 # Infrastructure Repository Backup
 
-**Backup Date:** $(date)  
-**Backup Location:** $BACKUP_DIR  
+**Backup Date:** $(date)
+**Backup Location:** $BACKUP_DIR
 **Repository:** $(git remote get-url origin 2>/dev/null || echo "Local repository")
 
 ## Repository Statistics
@@ -166,7 +171,7 @@ cat > "$BACKUP_DIR/backup-summary.json" << EOF
   },
   "backup_components": [
     "bare_repository",
-    "source_archive", 
+    "source_archive",
     "git_configuration",
     "infrastructure_inventory"
   ],
@@ -182,6 +187,7 @@ echo "Backup size: $(du -sh $BACKUP_DIR | cut -f1)"
 ### 1.2 Infrastructure Template Backup
 
 #### CloudFormation Template Extraction
+
 ```bash
 #!/bin/bash
 # cloudformation-template-backup.sh
@@ -207,49 +213,49 @@ echo "Found ${#ACTIVE_STACKS[@]} active CloudFormation stacks"
 # Backup each stack
 for stack in "${ACTIVE_STACKS[@]}"; do
   echo "Backing up stack: $stack"
-  
+
   stack_dir="$BACKUP_DIR/stacks/$stack"
   mkdir -p "$stack_dir"
-  
+
   # Get stack template
   aws cloudformation get-template \
     --stack-name "$stack" \
     --query 'TemplateBody' > "$stack_dir/template.json"
-  
+
   # Get stack parameters
   aws cloudformation describe-stacks \
     --stack-name "$stack" \
     --query 'Stacks[0].Parameters' > "$stack_dir/parameters.json"
-  
+
   # Get stack outputs
   aws cloudformation describe-stacks \
     --stack-name "$stack" \
     --query 'Stacks[0].Outputs' > "$stack_dir/outputs.json"
-  
+
   # Get stack tags
   aws cloudformation describe-stacks \
     --stack-name "$stack" \
     --query 'Stacks[0].Tags' > "$stack_dir/tags.json"
-  
+
   # Get stack events (last 100)
   aws cloudformation describe-stack-events \
     --stack-name "$stack" \
     --max-items 100 \
     --query 'StackEvents' > "$stack_dir/events.json"
-  
+
   # Create stack summary
   cat > "$stack_dir/stack-summary.md" << EOF
 # CloudFormation Stack: $stack
 
-**Backup Date:** $(date)  
-**Stack Status:** $(aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].StackStatus' --output text)  
-**Creation Time:** $(aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].CreationTime' --output text)  
+**Backup Date:** $(date)
+**Stack Status:** $(aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].StackStatus' --output text)
+**Creation Time:** $(aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].CreationTime' --output text)
 **Last Updated:** $(aws cloudformation describe-stacks --stack-name "$stack" --query 'Stacks[0].LastUpdatedTime' --output text)
 
 ## Files Included:
 - template.json: Stack template
 - parameters.json: Stack parameters
-- outputs.json: Stack outputs  
+- outputs.json: Stack outputs
 - tags.json: Stack tags
 - events.json: Recent stack events
 
@@ -270,8 +276,8 @@ done
 cat > "$BACKUP_DIR/cloudformation-summary.md" << EOF
 # CloudFormation Infrastructure Backup
 
-**Backup Date:** $(date)  
-**Total Stacks:** ${#ACTIVE_STACKS[@]}  
+**Backup Date:** $(date)
+**Total Stacks:** ${#ACTIVE_STACKS[@]}
 **Backup Location:** $BACKUP_DIR
 
 ## Active Stacks:
@@ -303,9 +309,9 @@ for stack_dir in stacks/*/; do
   if [ -d "$stack_dir" ]; then
     stack_name=$(basename "$stack_dir")
     recovery_name="$stack_name-$RECOVERY_SUFFIX"
-    
+
     echo "Recovering stack: $stack_name -> $recovery_name"
-    
+
     aws cloudformation create-stack \
       --stack-name "$recovery_name" \
       --template-body "file://$stack_dir/template.json" \
@@ -313,7 +319,7 @@ for stack_dir in stacks/*/; do
       --tags "file://$stack_dir/tags.json" \
       --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
       --on-failure ROLLBACK
-      
+
     echo "Stack $recovery_name creation initiated"
   fi
 done
@@ -327,6 +333,7 @@ echo "✓ CloudFormation backup completed: $BACKUP_DIR"
 ```
 
 #### CDK Application Backup
+
 ```bash
 #!/bin/bash
 # cdk-application-backup.sh
@@ -347,41 +354,41 @@ echo "Found ${#CDK_APPS[@]} CDK applications"
 for app_path in "${CDK_APPS[@]}"; do
   app_name=$(basename "$app_path")
   app_backup_dir="$BACKUP_DIR/apps/$app_name"
-  
+
   echo "Backing up CDK app: $app_name"
-  
+
   mkdir -p "$app_backup_dir"
-  
+
   # Copy CDK source code
   cp -r "$app_path"/* "$app_backup_dir/"
-  
+
   # Synthesize CDK templates
   cd "$app_path"
-  
+
   if command -v cdk &> /dev/null; then
     echo "Synthesizing CDK templates for $app_name..."
-    
+
     # Create synth output directory
     synth_dir="$app_backup_dir/synthesized"
     mkdir -p "$synth_dir"
-    
+
     # Synthesize all stacks
     cdk synth --output "$synth_dir" 2>/dev/null || echo "⚠ CDK synth failed for $app_name"
-    
+
     # List CDK stacks
     cdk list > "$app_backup_dir/cdk-stacks.txt" 2>/dev/null || echo "No stacks found"
-    
+
     # Get CDK context
     if [ -f "cdk.context.json" ]; then
       cp cdk.context.json "$app_backup_dir/"
     fi
-    
+
     # Create deployment instructions
     cat > "$app_backup_dir/deployment-instructions.md" << EOF
 # CDK Application: $app_name
 
-**Backup Date:** $(date)  
-**CDK Version:** $(cdk --version 2>/dev/null || echo "Unknown")  
+**Backup Date:** $(date)
+**CDK Version:** $(cdk --version 2>/dev/null || echo "Unknown")
 **Node Version:** $(node --version 2>/dev/null || echo "Unknown")
 
 ## Stacks in this Application:
@@ -403,7 +410,7 @@ EOF
   else
     echo "⚠ CDK CLI not available, skipping synthesis"
   fi
-  
+
   cd - > /dev/null
 done
 
@@ -416,8 +423,8 @@ fi
 cat > "$BACKUP_DIR/cdk-summary.md" << EOF
 # CDK Applications Backup
 
-**Backup Date:** $(date)  
-**CDK Applications Found:** ${#CDK_APPS[@]}  
+**Backup Date:** $(date)
+**CDK Applications Found:** ${#CDK_APPS[@]}
 **Backup Location:** $BACKUP_DIR
 
 ## Applications:
@@ -446,6 +453,7 @@ echo "✓ CDK backup completed: $BACKUP_DIR"
 ### 2.1 GitHub Actions Workflow Backup
 
 #### Workflow Configuration Backup
+
 ```bash
 #!/bin/bash
 # github-actions-backup.sh
@@ -462,15 +470,15 @@ mkdir -p "$BACKUP_DIR"
 if [ -d ".github/workflows" ]; then
   echo "Copying GitHub Actions workflows..."
   cp -r .github/workflows "$BACKUP_DIR/"
-  
+
   # List all workflow files
   find .github/workflows -name "*.yml" -o -name "*.yaml" > "$BACKUP_DIR/workflow-files.txt"
-  
+
   # Analyze workflows
   cat > "$BACKUP_DIR/workflow-analysis.md" << EOF
 # GitHub Actions Workflows Analysis
 
-**Backup Date:** $(date)  
+**Backup Date:** $(date)
 **Workflow Files:** $(find .github/workflows -name "*.yml" -o -name "*.yaml" | wc -l)
 
 ## Workflow Files:
@@ -489,7 +497,7 @@ fi
 # 2. Backup GitHub configuration
 if [ -d ".github" ]; then
   echo "Backing up GitHub configuration..."
-  
+
   # Copy issue templates, PR templates, etc.
   find .github -type f ! -path ".github/workflows/*" -exec cp --parents {} "$BACKUP_DIR/" \;
 fi
@@ -502,7 +510,7 @@ if [ -d ".github/workflows" ]; then
   grep -h "secrets\." .github/workflows/*.yml 2>/dev/null | \
     sed 's/.*secrets\.\([A-Z_]*\).*/\1/' | \
     sort -u > "$BACKUP_DIR/required-secrets.txt" || touch "$BACKUP_DIR/required-secrets.txt"
-  
+
   # Extract environment variable references
   grep -h "\${{ env\." .github/workflows/*.yml 2>/dev/null | \
     sed 's/.*env\.\([A-Z_]*\).*/\1/' | \
@@ -543,6 +551,7 @@ echo "✓ GitHub Actions backup completed: $BACKUP_DIR"
 ### 2.2 Secrets and Configuration Management
 
 #### Secrets Documentation and Management
+
 ```bash
 #!/bin/bash
 # secrets-documentation.sh
@@ -575,16 +584,16 @@ echo "You must provide the actual parameter values."
 while IFS= read -r param; do
   param_name=$(echo "$param" | jq -r '.Name')
   param_type=$(echo "$param" | jq -r '.Type')
-  
+
   echo "Restore parameter: $param_name (Type: $param_type)"
   echo "aws ssm put-parameter --name '$param_name' --value 'YOUR_VALUE_HERE' --type '$param_type'"
-  
+
 done < <(jq -c '.[]' parameter-store-inventory.json)
 EOF
 
 chmod +x "$BACKUP_DIR/restore-parameters.sh"
 
-# 2. AWS Secrets Manager documentation  
+# 2. AWS Secrets Manager documentation
 echo "Documenting AWS Secrets Manager secrets..."
 
 aws secretsmanager list-secrets \
@@ -624,7 +633,7 @@ cat > "$BACKUP_DIR/configuration-restoration-guide.md" << EOF
 - **Restoration:** Run \`restore-parameters.sh\` with actual values
 - **Parameter Count:** $(jq length "$BACKUP_DIR/parameter-store-inventory.json" 2>/dev/null || echo "Unknown")
 
-## AWS Secrets Manager  
+## AWS Secrets Manager
 - **Inventory:** See \`secrets-manager-inventory.json\`
 - **Secret Count:** $(jq length "$BACKUP_DIR/secrets-manager-inventory.json" 2>/dev/null || echo "Unknown")
 
@@ -652,7 +661,7 @@ cat > "$BACKUP_DIR/configuration-restoration-guide.md" << EOF
 
 ## Restoration Checklist:
 - [ ] AWS Parameter Store parameters restored
-- [ ] AWS Secrets Manager secrets restored  
+- [ ] AWS Secrets Manager secrets restored
 - [ ] Firebase service account keys configured
 - [ ] Environment variables populated
 - [ ] CI/CD secrets configured
@@ -670,6 +679,7 @@ echo "✓ Configuration documentation completed: $BACKUP_DIR"
 ### 3.1 CloudFormation Stack Drift Detection
 
 #### Automated Drift Detection and Backup
+
 ```bash
 #!/bin/bash
 # cloudformation-drift-backup.sh
@@ -696,43 +706,43 @@ drift_summary=()
 
 for stack in "${ACTIVE_STACKS[@]}"; do
   echo "Checking drift for stack: $stack"
-  
+
   stack_dir="$BACKUP_DIR/stacks/$stack"
   mkdir -p "$stack_dir"
-  
+
   # Initiate drift detection
   drift_detection_id=$(aws cloudformation detect-stack-drift \
     --stack-name "$stack" \
     --query 'StackDriftDetectionId' \
     --output text)
-  
+
   echo "Drift detection initiated: $drift_detection_id"
-  
+
   # Wait for drift detection to complete
   echo "Waiting for drift detection to complete..."
   aws cloudformation wait stack-drift-detection-complete \
     --stack-drift-detection-id "$drift_detection_id"
-  
+
   # Get drift detection results
   aws cloudformation describe-stack-drift-detection \
     --stack-drift-detection-id "$drift_detection_id" > "$stack_dir/drift-detection-result.json"
-  
+
   # Get resource drift details
   aws cloudformation describe-stack-resource-drifts \
     --stack-name "$stack" > "$stack_dir/resource-drifts.json"
-  
+
   # Determine drift status
   drift_status=$(jq -r '.StackDriftStatus' "$stack_dir/drift-detection-result.json")
   drifted_resources=$(jq '[.StackResourceDrifts[] | select(.StackResourceDriftStatus != "IN_SYNC")] | length' "$stack_dir/resource-drifts.json")
-  
+
   drift_summary+=("$stack:$drift_status:$drifted_resources")
-  
+
   # Create drift report for this stack
   cat > "$stack_dir/drift-report.md" << EOF
 # Stack Drift Report: $stack
 
-**Detection Date:** $(date)  
-**Stack Status:** $drift_status  
+**Detection Date:** $(date)
+**Stack Status:** $drift_status
 **Drifted Resources:** $drifted_resources
 
 ## Drift Detection Results:
@@ -756,7 +766,7 @@ done
 cat > "$BACKUP_DIR/drift-summary.md" << EOF
 # Infrastructure Drift Detection Summary
 
-**Detection Date:** $(date)  
+**Detection Date:** $(date)
 **Stacks Checked:** ${#ACTIVE_STACKS[@]}
 
 ## Drift Status Overview:
@@ -819,7 +829,7 @@ case "$ACTION" in
       --stack-name "$STACK_NAME" \
       --use-previous-template \
       --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-    
+
     echo "Stack update initiated. Monitor progress in AWS Console."
     ;;
   *)
@@ -837,6 +847,7 @@ echo "✓ Infrastructure drift detection completed: $BACKUP_DIR"
 ### 3.2 Resource State Documentation
 
 #### Infrastructure Resource Inventory
+
 ```python
 #!/usr/bin/env python3
 # infrastructure-inventory.py
@@ -850,7 +861,7 @@ import os
 def get_ec2_resources():
     """Get EC2 instances, volumes, and networking resources"""
     ec2 = boto3.client('ec2')
-    
+
     resources = {
         'instances': [],
         'volumes': [],
@@ -858,7 +869,7 @@ def get_ec2_resources():
         'vpcs': [],
         'subnets': []
     }
-    
+
     # EC2 Instances
     instances = ec2.describe_instances()
     for reservation in instances['Reservations']:
@@ -871,7 +882,7 @@ def get_ec2_resources():
                 'subnet_id': instance.get('SubnetId'),
                 'tags': instance.get('Tags', [])
             })
-    
+
     # EBS Volumes
     volumes = ec2.describe_volumes()
     for volume in volumes['Volumes']:
@@ -883,7 +894,7 @@ def get_ec2_resources():
             'encrypted': volume['Encrypted'],
             'tags': volume.get('Tags', [])
         })
-    
+
     # Security Groups
     sgs = ec2.describe_security_groups()
     for sg in sgs['SecurityGroups']:
@@ -894,16 +905,16 @@ def get_ec2_resources():
             'description': sg['Description'],
             'rules_count': len(sg['IpPermissions']) + len(sg['IpPermissionsEgress'])
         })
-    
+
     return resources
 
 def get_lambda_functions():
     """Get Lambda function inventory"""
     lambda_client = boto3.client('lambda')
-    
+
     functions = []
     paginator = lambda_client.get_paginator('list_functions')
-    
+
     for page in paginator.paginate():
         for function in page['Functions']:
             functions.append({
@@ -914,27 +925,27 @@ def get_lambda_functions():
                 'timeout': function['Timeout'],
                 'last_modified': function['LastModified']
             })
-    
+
     return functions
 
 def get_s3_buckets():
     """Get S3 bucket inventory"""
     s3 = boto3.client('s3')
-    
+
     buckets = []
     bucket_list = s3.list_buckets()
-    
+
     for bucket in bucket_list['Buckets']:
         bucket_name = bucket['Name']
-        
+
         try:
             # Get bucket location
             location = s3.get_bucket_location(Bucket=bucket_name)
             region = location['LocationConstraint'] or 'us-east-1'
-            
+
             # Get bucket versioning
             versioning = s3.get_bucket_versioning(Bucket=bucket_name)
-            
+
             # Get bucket size (approximate)
             cloudwatch = boto3.client('cloudwatch', region_name=region)
             try:
@@ -950,11 +961,11 @@ def get_s3_buckets():
                     Period=86400,
                     Statistics=['Average']
                 )
-                
+
                 size_bytes = metrics['Datapoints'][0]['Average'] if metrics['Datapoints'] else 0
             except:
                 size_bytes = 0
-            
+
             buckets.append({
                 'bucket_name': bucket_name,
                 'creation_date': bucket['CreationDate'].isoformat(),
@@ -963,25 +974,25 @@ def get_s3_buckets():
                 'size_bytes': int(size_bytes),
                 'size_gb': round(size_bytes / (1024**3), 2)
             })
-            
+
         except Exception as e:
             buckets.append({
                 'bucket_name': bucket_name,
                 'creation_date': bucket['CreationDate'].isoformat(),
                 'error': str(e)
             })
-    
+
     return buckets
 
 def get_rds_resources():
     """Get RDS database inventory"""
     rds = boto3.client('rds')
-    
+
     resources = {
         'db_instances': [],
         'db_clusters': []
     }
-    
+
     # DB Instances
     instances = rds.describe_db_instances()
     for instance in instances['DBInstances']:
@@ -994,7 +1005,7 @@ def get_rds_resources():
             'allocated_storage': instance.get('AllocatedStorage'),
             'multi_az': instance['MultiAZ']
         })
-    
+
     # DB Clusters (Aurora)
     clusters = rds.describe_db_clusters()
     for cluster in clusters['DBClusters']:
@@ -1006,49 +1017,49 @@ def get_rds_resources():
             'backup_retention_period': cluster['BackupRetentionPeriod'],
             'members': len(cluster['DBClusterMembers'])
         })
-    
+
     return resources
 
 def create_infrastructure_inventory():
     """Create comprehensive infrastructure inventory"""
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     backup_dir = f'./infrastructure-backups/{timestamp}/inventory'
-    
+
     os.makedirs(backup_dir, exist_ok=True)
-    
+
     print("Creating infrastructure inventory...")
-    
+
     inventory = {
         'timestamp': datetime.now().isoformat(),
         'account_id': boto3.client('sts').get_caller_identity()['Account'],
         'region': boto3.Session().region_name or 'us-east-1'
     }
-    
+
     # Collect resource inventories
     print("Collecting EC2 resources...")
     inventory['ec2'] = get_ec2_resources()
-    
+
     print("Collecting Lambda functions...")
     inventory['lambda'] = get_lambda_functions()
-    
+
     print("Collecting S3 buckets...")
     inventory['s3'] = get_s3_buckets()
-    
+
     print("Collecting RDS resources...")
     inventory['rds'] = get_rds_resources()
-    
+
     # Save complete inventory
     inventory_file = os.path.join(backup_dir, 'infrastructure-inventory.json')
     with open(inventory_file, 'w') as f:
         json.dump(inventory, f, indent=2, default=str)
-    
+
     # Create summary report
     summary_file = os.path.join(backup_dir, 'inventory-summary.md')
     with open(summary_file, 'w') as f:
         f.write(f"""# Infrastructure Inventory Summary
 
-**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
-**Account ID:** {inventory['account_id']}  
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Account ID:** {inventory['account_id']}
 **Region:** {inventory['region']}
 
 ## Resource Counts:
@@ -1073,7 +1084,7 @@ def create_infrastructure_inventory():
 - inventory-summary.md: This summary report
 
 """)
-    
+
     print(f"✓ Infrastructure inventory completed: {backup_dir}")
     return inventory_file
 
@@ -1086,6 +1097,7 @@ if __name__ == '__main__':
 ### 4.1 Infrastructure Recovery Orchestration
 
 #### Master Recovery Script
+
 ```bash
 #!/bin/bash
 # infrastructure-recovery.sh
@@ -1128,7 +1140,7 @@ log_recovery_result() {
   local component=$1
   local status=$2
   local message=$3
-  
+
   recovery_results[$component]=$status
   echo "[$component] $status: $message" | tee -a "$RECOVERY_LOG"
 }
@@ -1150,13 +1162,13 @@ echo "--- Phase 2: Infrastructure Recovery ---" | tee -a "$RECOVERY_LOG"
 # CloudFormation recovery
 if [ -d "$BACKUP_DIR/cloudformation" ]; then
   echo "Recovering CloudFormation stacks..." | tee -a "$RECOVERY_LOG"
-  
+
   if [ "$DRY_RUN" = "false" ]; then
     cd "$BACKUP_DIR/cloudformation"
     ./mass-recovery.sh "recovered-$(date +%Y%m%d)" >> "$RECOVERY_LOG" 2>&1
     recovery_status=$?
     cd - > /dev/null
-    
+
     if [ $recovery_status -eq 0 ]; then
       log_recovery_result "CloudFormation" "SUCCESS" "Stacks recovery initiated"
     else
@@ -1172,7 +1184,7 @@ fi
 # CDK recovery
 if [ -d "$BACKUP_DIR/cdk" ]; then
   echo "Recovering CDK applications..." | tee -a "$RECOVERY_LOG"
-  
+
   if [ "$DRY_RUN" = "false" ]; then
     # This would require manual intervention for CDK deployment
     log_recovery_result "CDK" "MANUAL" "CDK recovery requires manual deployment"
@@ -1217,16 +1229,16 @@ echo "--- Phase 6: Recovery Validation ---" | tee -a "$RECOVERY_LOG"
 
 if [ "$DRY_RUN" = "false" ]; then
   echo "Running post-recovery validation..." | tee -a "$RECOVERY_LOG"
-  
+
   # Check CloudFormation stacks
   aws cloudformation list-stacks \
     --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
     --query 'StackSummaries[?contains(StackName, `recovered`)].StackName' \
     --output text > "/tmp/recovered-stacks.txt"
-  
+
   recovered_stacks=$(wc -l < "/tmp/recovered-stacks.txt")
   echo "Recovered CloudFormation stacks: $recovered_stacks" | tee -a "$RECOVERY_LOG"
-  
+
   log_recovery_result "Validation" "COMPLETED" "Post-recovery validation completed"
 else
   log_recovery_result "Validation" "SKIPPED" "Validation skipped in dry run mode"
@@ -1258,8 +1270,8 @@ echo "Manual Required: $manual_recoveries" | tee -a "$RECOVERY_LOG"
 cat > "./manual-recovery-checklist-$BACKUP_DATE.md" << EOF
 # Manual Recovery Checklist
 
-**Recovery Date:** $(date)  
-**Backup Date:** $BACKUP_DATE  
+**Recovery Date:** $(date)
+**Backup Date:** $BACKUP_DATE
 **Recovery Type:** $RECOVERY_TYPE
 
 ## Automated Recovery Results:
@@ -1289,7 +1301,7 @@ done)
 
 ### 4. Data Recovery
 - [ ] Restore Aurora PostgreSQL data (if needed)
-- [ ] Restore S3 bucket contents (if needed)  
+- [ ] Restore S3 bucket contents (if needed)
 - [ ] Restore Firebase data (if needed)
 - [ ] Verify data integrity
 
@@ -1340,6 +1352,7 @@ fi
 ## Implementation Schedule
 
 ### Phase 1: Documentation and Basic Backup (Week 1)
+
 ```yaml
 ✅ Complete Infrastructure as Code backup procedures documentation
 ⏳ Implement Git repository backup with multiple remotes
@@ -1349,6 +1362,7 @@ fi
 ```
 
 ### Phase 2: Advanced Backup and Monitoring (Week 2)
+
 ```yaml
 ⏳ Implement stack drift detection and backup
 ⏳ Create infrastructure resource inventory automation
@@ -1357,6 +1371,7 @@ fi
 ```
 
 ### Phase 3: Recovery and Testing (Week 3-4)
+
 ```yaml
 ⏳ Create infrastructure recovery orchestration
 ⏳ Implement recovery testing procedures
@@ -1367,16 +1382,17 @@ fi
 ## Next Steps
 
 ### Immediate Actions
+
 1. ✅ Complete IaC backup strategy documentation
 2. ⏳ Set up Git repository backup with multiple remotes
 3. ⏳ Implement CloudFormation stack backup automation
 4. ⏳ Create secrets documentation templates
 
 ### Integration with Disaster Recovery Plan
+
 1. ⏳ Coordinate with database and application backup procedures
-2. ⏳ Integrate with Empire Distribution standards
-3. ⏳ Establish unified backup testing schedule
-4. ⏳ Create cross-component recovery dependencies mapping
+2. ⏳ Establish unified backup testing schedule
+3. ⏳ Create cross-component recovery dependencies mapping
 
 ---
 
@@ -1386,4 +1402,4 @@ fi
 **Owner**: Adrian Green, Head of Engineering  
 **Status**: Phase 1 Implementation
 
-*This document contains critical infrastructure backup and recovery procedures. Ensure proper security when handling infrastructure templates and configuration data.*
+_This document contains critical infrastructure backup and recovery procedures. Ensure proper security when handling infrastructure templates and configuration data._

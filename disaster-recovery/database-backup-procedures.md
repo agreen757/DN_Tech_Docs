@@ -1,24 +1,27 @@
 # Database Backup and Recovery Procedures
 
 ## Overview
+
 This document provides comprehensive procedures for backing up and recovering Aurora PostgreSQL and DocumentDB databases in Distro Nation's infrastructure. These procedures ensure data protection and enable rapid recovery in disaster scenarios.
 
 ## Executive Summary
 
 ### Backup Coverage
+
 - **Aurora PostgreSQL**: Automated point-in-time recovery with 7-day retention
 - **DocumentDB**: Automated daily backups with cross-region replication
 - **Recovery Time Objective (RTO)**: 30-60 minutes for database restoration
 - **Recovery Point Objective (RPO)**: Maximum 5 minutes data loss
 
 ### Current Backup Status
+
 ```yaml
 Aurora PostgreSQL (database-2-instance-1):
   Backup Retention: 7 days
   Point-in-Time Recovery: Enabled
   Backup Window: 04:00-05:00 UTC
   Cross-Region Backup: Not configured
-  
+
 DocumentDB:
   Backup Storage: 1,630 GB (current)
   Retention Period: 30 days (estimated)
@@ -31,6 +34,7 @@ DocumentDB:
 ### 1.1 Automated Backup Configuration
 
 #### Current Backup Settings
+
 ```yaml
 Database Identifier: database-2-instance-1
 Engine: aurora-postgresql (serverless v2)
@@ -43,6 +47,7 @@ Backup Configuration:
 ```
 
 #### Backup Enhancement Recommendations
+
 ```bash
 # Extend backup retention for compliance
 aws rds modify-db-cluster \
@@ -72,6 +77,7 @@ aws rds put-backup-vault-policy \
 ### 1.2 Manual Backup Procedures
 
 #### Creating Manual Snapshots
+
 ```bash
 # Create manual cluster snapshot
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -89,6 +95,7 @@ aws rds describe-db-cluster-snapshots \
 ```
 
 #### Pre-Maintenance Backup Script
+
 ```bash
 #!/bin/bash
 # pre-maintenance-backup.sh
@@ -125,6 +132,7 @@ fi
 ### 1.3 Point-in-Time Recovery Procedures
 
 #### Recovery Process Overview
+
 ```mermaid
 graph TD
     A[Identify Recovery Point] --> B[Stop Application Traffic]
@@ -138,6 +146,7 @@ graph TD
 #### Step-by-Step Recovery Process
 
 **Step 1: Determine Recovery Point**
+
 ```bash
 # List available recovery time range
 aws rds describe-db-clusters \
@@ -152,6 +161,7 @@ aws rds describe-db-clusters \
 ```
 
 **Step 2: Create Recovery Cluster**
+
 ```bash
 # Restore cluster to specific point in time
 RECOVERY_TIME="2025-07-25T14:00:00.000Z"  # Adjust as needed
@@ -177,6 +187,7 @@ aws rds create-db-instance \
 ```
 
 **Step 3: Validate Recovery**
+
 ```bash
 # Wait for cluster to be available
 aws rds wait db-cluster-available \
@@ -192,13 +203,14 @@ echo "Recovery cluster available at: ${RECOVERY_ENDPOINT}"
 ```
 
 **Step 4: Data Integrity Validation**
+
 ```sql
 -- Connect to recovery cluster and validate
 -- Replace with actual connection details
 \c postgresql://username:password@${RECOVERY_ENDPOINT}:5432/dbname
 
 -- Check table counts
-SELECT 
+SELECT
   schemaname,
   tablename,
   n_tup_ins - n_tup_del as row_count
@@ -211,58 +223,58 @@ SELECT COUNT(*) as payout_count FROM payouts WHERE created_at > NOW() - INTERVAL
 SELECT MAX(created_at) as latest_record FROM audit_log;
 
 -- Check data consistency
-SELECT 
+SELECT
   constraint_name,
   table_name,
   constraint_type
-FROM information_schema.table_constraints 
-WHERE constraint_type = 'FOREIGN KEY' 
+FROM information_schema.table_constraints
+WHERE constraint_type = 'FOREIGN KEY'
   AND constraint_schema = 'public';
 ```
 
 ### 1.4 Disaster Recovery Scenarios
 
 #### Scenario 1: Database Corruption
+
 ```yaml
 Situation: Data corruption detected in production database
-Recovery Steps:
-  1. Immediately stop all write operations to database
+Recovery Steps: 1. Immediately stop all write operations to database
   2. Identify last known good point-in-time (before corruption)
   3. Create recovery cluster from point-in-time
   4. Validate data integrity in recovery cluster
   5. Update application to use recovery cluster
   6. Monitor application performance and data consistency
-  
+
 Estimated Recovery Time: 45-60 minutes
 Data Loss: 5-30 minutes depending on detection time
 ```
 
 #### Scenario 2: Complete Database Failure
+
 ```yaml
 Situation: Aurora cluster completely unavailable
-Recovery Steps:
-  1. Attempt cluster restart and failover
+Recovery Steps: 1. Attempt cluster restart and failover
   2. If restart fails, create new cluster from latest automated backup
   3. Restore from most recent snapshot if point-in-time fails
   4. Validate cluster health and performance
   5. Update DNS/connection strings
   6. Restore application services
-  
+
 Estimated Recovery Time: 30-45 minutes
 Data Loss: Maximum 5 minutes (continuous backup)
 ```
 
 #### Scenario 3: Region-Wide Failure
+
 ```yaml
 Situation: AWS us-east-1 region unavailable
 Current Limitation: No cross-region backups configured
-Recovery Steps:
-  1. Activate manual cross-region backup restoration
+Recovery Steps: 1. Activate manual cross-region backup restoration
   2. Create new cluster in us-west-2 from latest manual backup
   3. Update application configuration for new region
   4. Redirect traffic to new region
   5. Monitor performance and adjust scaling
-  
+
 Estimated Recovery Time: 2-4 hours
 Data Loss: Up to 24 hours (depends on manual backup frequency)
 Recommendation: Implement automated cross-region backup
@@ -273,6 +285,7 @@ Recommendation: Implement automated cross-region backup
 ### 2.1 Current DocumentDB Backup Analysis
 
 #### Backup Storage Assessment
+
 ```yaml
 Current Backup Usage: 1,630 GB
 Estimated Database Size: 500-800 GB
@@ -282,6 +295,7 @@ Retention Estimate: 30+ days
 ```
 
 #### Backup Optimization Recommendations
+
 ```bash
 # Review current backup retention
 aws docdb describe-db-clusters \
@@ -298,6 +312,7 @@ aws docdb modify-db-cluster \
 ### 2.2 DocumentDB Recovery Procedures
 
 #### Point-in-Time Recovery
+
 ```bash
 # Create new cluster from point-in-time
 RECOVERY_TIME="2025-07-25T14:00:00.000Z"
@@ -319,20 +334,23 @@ aws docdb create-db-instance \
 ```
 
 #### Data Validation for DocumentDB
+
 ```javascript
 // Connect to DocumentDB recovery cluster and validate
 // Example validation queries for DocumentDB
 
 // Check collection counts
-db.runCommand({listCollections: 1}).cursor.firstBatch.forEach(
-  function(collection) {
-    print(collection.name + ": " + db[collection.name].count());
-  }
-);
+db.runCommand({ listCollections: 1 }).cursor.firstBatch.forEach(function (
+  collection
+) {
+  print(collection.name + ": " + db[collection.name].count());
+});
 
 // Validate recent data
-db.users.find().sort({createdAt: -1}).limit(10);
-db.payouts.find({createdAt: {$gte: new Date(Date.now() - 7*24*60*60*1000)}}).count();
+db.users.find().sort({ createdAt: -1 }).limit(10);
+db.payouts
+  .find({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
+  .count();
 
 // Check indexes
 db.users.getIndexes();
@@ -344,6 +362,7 @@ db.payouts.getIndexes();
 ### 3.1 CloudWatch Metrics and Alarms
 
 #### Aurora Backup Monitoring
+
 ```bash
 # Create CloudWatch alarm for backup failures
 aws cloudwatch put-metric-alarm \
@@ -375,6 +394,7 @@ aws cloudwatch put-metric-alarm \
 ### 3.2 Automated Backup Testing
 
 #### Weekly Backup Validation Script
+
 ```bash
 #!/bin/bash
 # weekly-backup-test.sh
@@ -404,17 +424,17 @@ aws rds restore-db-cluster-to-point-in-time \
 
 if [ $? -eq 0 ]; then
   echo "SUCCESS: Backup test cluster created" >> $LOG_FILE
-  
+
   # Wait for cluster to be available
   aws rds wait db-cluster-available --db-cluster-identifier "$TEST_CLUSTER_ID"
-  
+
   # Cleanup test cluster
   aws rds delete-db-cluster \
     --db-cluster-identifier "$TEST_CLUSTER_ID" \
     --skip-final-snapshot
-    
+
   echo "SUCCESS: Backup validation completed successfully" >> $LOG_FILE
-  
+
   # Send success notification
   aws sns publish \
     --topic-arn "$NOTIFICATION_TOPIC" \
@@ -422,7 +442,7 @@ if [ $? -eq 0 ]; then
     --subject "Backup Validation Success"
 else
   echo "ERROR: Backup validation failed" >> $LOG_FILE
-  
+
   # Send failure notification
   aws sns publish \
     --topic-arn "$NOTIFICATION_TOPIC" \
@@ -436,6 +456,7 @@ fi
 ### 4.1 Implementation Plan
 
 #### Phase 1: Manual Cross-Region Backups
+
 ```bash
 # Create cross-region snapshot copy
 SOURCE_SNAPSHOT="manual-backup-20250725-140000"
@@ -451,13 +472,14 @@ aws rds copy-db-cluster-snapshot \
 ```
 
 #### Phase 2: Automated Cross-Region Replication
+
 ```yaml
 Implementation Plan:
   Week 1: Set up AWS Backup service for Aurora
   Week 2: Configure cross-region backup vault in us-west-2
   Week 3: Implement automated daily cross-region backups
   Week 4: Test cross-region recovery procedures
-  
+
 Cost Impact: +$20-30/month for cross-region storage
 Recovery Benefit: Reduces region failure RTO from 4+ hours to 1-2 hours
 ```
@@ -467,6 +489,7 @@ Recovery Benefit: Reduces region failure RTO from 4+ hours to 1-2 hours
 ### 5.1 Fast Recovery Procedures
 
 #### Parallel Recovery Strategy
+
 ```bash
 #!/bin/bash
 # parallel-recovery.sh
@@ -511,17 +534,18 @@ echo "Recovery operations completed"
 ### 5.2 Recovery Validation Checklist
 
 #### Database Recovery Validation
+
 ```yaml
 Critical Validation Steps:
   □ Cluster status: Available
-  □ Instance status: Available  
+  □ Instance status: Available
   □ Connection test: Successful
   □ Table counts match baseline
   □ Foreign key constraints valid
   □ Recent transaction log review
   □ Performance metrics within normal range
   □ Backup jobs resuming normally
-  
+
 Business Validation:
   □ User authentication working
   □ Payment processing functional
@@ -535,12 +559,12 @@ Business Validation:
 ### 6.1 Recovery Runbooks
 
 #### Quick Reference Cards
+
 ```yaml
 Emergency Contacts:
   Primary DBA: Adrian Green (Head of Engineering)
   AWS Support: Enterprise Support Case
-  Empire Distribution: [Emergency escalation contact]
-  
+
 Critical Information:
   Aurora Cluster: database-2
   Region: us-east-1
@@ -552,6 +576,7 @@ Critical Information:
 ### 6.2 Regular Training Schedule
 
 #### Team Training Plan
+
 ```yaml
 Monthly: Database recovery drill simulation
 Quarterly: Cross-region failover testing
@@ -562,22 +587,24 @@ Annually: Recovery procedure documentation review
 ## Next Steps
 
 ### Immediate Actions (Week 1)
+
 1. ✅ Document current backup procedures and capabilities
 2. ⏳ Implement backup monitoring and alerting
 3. ⏳ Create manual backup testing scripts
 4. ⏳ Establish recovery validation procedures
 
 ### Short-term Goals (Month 1)
+
 1. ⏳ Implement automated cross-region backups
 2. ⏳ Optimize DocumentDB backup retention
 3. ⏳ Create emergency recovery runbooks
 4. ⏳ Establish backup testing schedule
 
 ### Long-term Goals (Months 2-3)
+
 1. ⏳ Implement automated recovery testing
 2. ⏳ Create self-healing backup systems
-3. ⏳ Integrate with Empire backup standards
-4. ⏳ Establish comprehensive SLAs
+3. ⏳ Establish comprehensive SLAs
 
 ---
 
@@ -587,4 +614,4 @@ Annually: Recovery procedure documentation review
 **Owner**: Adrian Green, Head of Engineering  
 **Status**: Phase 1 Implementation
 
-*This document contains critical recovery procedures. Ensure all team members have access and are trained on these procedures.*
+_This document contains critical recovery procedures. Ensure all team members have access and are trained on these procedures._
