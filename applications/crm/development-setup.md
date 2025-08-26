@@ -67,6 +67,11 @@ REACT_APP_SPOTIFY_CLIENT_ID=your_spotify_client_id
 REACT_APP_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 REACT_APP_SIMILARWEB_API_KEY=your_similarweb_api_key
 
+# AWS S3 Configuration (NEW)
+REACT_APP_S3_BUCKET=distro-nation-reports
+REACT_APP_S3_REGION=<REGION>
+REACT_APP_S3_IDENTITY_POOL_ID=<REGION>:6ae2de80-824a-43d4-aef7-b825ef284cf5
+
 # Development Settings
 REACT_APP_ENV=development
 REACT_APP_DEBUG=true
@@ -166,7 +171,193 @@ amplify push
 }
 ```
 
-### 5. Development Server Setup
+### 5. AWS S3 File Browser Setup (NEW)
+
+#### S3 Bucket Configuration
+The S3 File Browser requires specific AWS S3 and Cognito configuration for secure file access.
+
+**Required AWS Resources**:
+1. **S3 Bucket**: `distro-nation-reports` (or configured bucket name)
+2. **Cognito Identity Pool**: For AWS credential management
+3. **IAM Roles**: For authenticated and unauthenticated access
+
+#### S3 Bucket Policy Configuration
+Apply this bucket policy to allow access from Cognito authenticated users:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCognitoAuthenticatedUsers",
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "cognito-identity.amazonaws.com"
+      },
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::distro-nation-reports",
+        "arn:aws:s3:::distro-nation-reports/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "cognito-identity.amazonaws.com:aud": "<REGION>:6ae2de80-824a-43d4-aef7-b825ef284cf5"
+        },
+        "ForAnyValue:StringLike": {
+          "cognito-identity.amazonaws.com:amr": "authenticated"
+        }
+      }
+    }
+  ]
+}
+```
+
+#### CORS Configuration for S3 Bucket
+Configure CORS to allow browser access:
+
+```json
+[
+  {
+    "AllowedHeaders": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "HEAD"
+    ],
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "https://crm.distro-nation.com"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+#### Cognito Identity Pool Configuration
+Create a Cognito Identity Pool with the following settings:
+
+```json
+{
+  "identityPoolId": "<REGION>:6ae2de80-824a-43d4-aef7-b825ef284cf5",
+  "identityPoolName": "DistroNationCRM",
+  "allowUnauthenticatedIdentities": false,
+  "authenticationProviders": {
+    "firebase": {
+      "provider": "firebase",
+      "enabled": true
+    }
+  },
+  "roles": {
+    "authenticated": "arn:aws:iam::ACCOUNT:role/Cognito_DistroNationCRMAuth_Role",
+    "unauthenticated": null
+  }
+}
+```
+
+#### Required NPM Dependencies for S3 Integration
+Install additional dependencies for S3 functionality:
+
+```bash
+# AWS S3 SDK and related packages
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+
+# File handling and ZIP creation
+npm install jszip file-saver
+
+# Type definitions
+npm install --save-dev @types/file-saver
+```
+
+**Updated package.json dependencies**:
+```json
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.x.x",
+    "@aws-sdk/s3-request-presigner": "^3.x.x",
+    "jszip": "^3.x.x",
+    "file-saver": "^2.x.x"
+  },
+  "devDependencies": {
+    "@types/file-saver": "^2.x.x"
+  }
+}
+```
+
+#### S3Service Development Configuration
+Create a development-specific S3 service configuration:
+
+```typescript
+// src/config/s3.config.ts
+interface S3Config {
+  bucket: string;
+  region: string;
+  identityPoolId: string;
+  maxFileSize: number;
+  allowedFileTypes: string[];
+}
+
+export const s3Config: S3Config = {
+  bucket: process.env.REACT_APP_S3_BUCKET || 'distro-nation-reports',
+  region: process.env.REACT_APP_S3_REGION || '<REGION>',
+  identityPoolId: process.env.REACT_APP_S3_IDENTITY_POOL_ID || '',
+  maxFileSize: 100 * 1024 * 1024, // 100MB
+  allowedFileTypes: ['.pdf', '.xlsx', '.csv', '.txt', '.docx']
+};
+
+// Development-specific overrides
+if (process.env.REACT_APP_ENV === 'development') {
+  // Allow larger files and additional types for testing
+  s3Config.maxFileSize = 500 * 1024 * 1024; // 500MB
+  s3Config.allowedFileTypes.push('.zip', '.json');
+}
+```
+
+#### Testing S3 Integration Locally
+```bash
+# Verify S3 configuration
+npm start
+
+# Check browser console for S3 initialization logs
+# Navigate to /mailer/template and switch to "Reports Download" tab
+# Verify file listing works without errors
+
+# Test file download functionality
+# Select files and test both individual and bulk download
+```
+
+#### S3 Security Validation Scripts
+Create development scripts to validate S3 setup:
+
+```typescript
+// src/utils/s3SecurityValidator.ts
+export const validateS3Configuration = async (): Promise<boolean> => {
+  try {
+    // Test S3 connection
+    const s3Service = new S3Service();
+    await s3Service.listFiles('', 1); // Test with minimal request
+    
+    console.log('✅ S3 Configuration Valid');
+    return true;
+  } catch (error) {
+    console.error('❌ S3 Configuration Error:', error);
+    return false;
+  }
+};
+
+// Run validation on app startup in development
+if (process.env.REACT_APP_ENV === 'development') {
+  validateS3Configuration();
+}
+```
+
+### 6. Development Server Setup
 
 #### Start Development Server
 ```bash

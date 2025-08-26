@@ -64,6 +64,48 @@ This repository contains technical documentation of the Distro Nation Environmen
 - `runbooks/` - Operational procedures and troubleshooting guides
 - `docs/` - Sphinx documentation configuration for Read the Docs
 
+## Applications
+
+### Distro Nation CRM Application
+
+**Email Campaign Management & Financial Report Access**
+
+The Distro Nation CRM serves as the primary administrative interface for managing customer communications and accessing financial reports. Built with React TypeScript and Material-UI, the application provides:
+
+**Core Features:**
+- **Email Campaign Creation**: Rich text editor with template management for financial and newsletter campaigns
+- **User List Management**: Dynamic recipient targeting and segmentation
+- **Campaign Analytics**: Performance tracking with delivery rates, open rates, and engagement metrics
+- **S3 Reports Download**: Direct access to financial reports stored in AWS S3 with:
+  - Hierarchical folder navigation with breadcrumb interface
+  - Individual and bulk file downloads with ZIP creation
+  - Secure authenticated access via AWS Cognito Identity Pool
+  - Real-time download progress tracking and error handling
+
+**Technical Stack:**
+- Frontend: React 18.2.0 with TypeScript and Material-UI
+- Authentication: Firebase Auth + AWS Amplify with Cognito integration
+- File Operations: AWS S3 SDK v3 for direct S3 integration
+- APIs: dn-api integration for user management and email delivery
+
+### YouTube CMS Metadata Management Tool
+
+**Centralized Content Management for YouTube Platform**
+
+A Flask-based Python application that provides comprehensive metadata management for YouTube Content Management System operations, enabling bulk processing and synchronization of video content data.
+
+**Core Features:**
+- **Bulk Metadata Processing**: CSV import with validation and YouTube API synchronization
+- **Advanced Search & Filtering**: Multi-criteria content discovery with real-time results
+- **Report Processing**: Automated S3 report ingestion and analysis
+- **Real-time Sync**: WebSocket-based notifications and live updates
+
+**Technical Stack:**
+- Backend: Python 3.8+ with Flask and SQLAlchemy ORM
+- Database: PostgreSQL with advanced features (arrays, JSON columns)
+- Real-time: Flask-SocketIO for WebSocket communication
+- APIs: YouTube Data API v3 and YouTube CMS API integration
+
 ## Documentation
 
 This repository is configured for [Read the Docs](https://readthedocs.org/) hosting with the following features:

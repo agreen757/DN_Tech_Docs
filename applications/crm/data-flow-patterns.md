@@ -1516,3 +1516,539 @@ def check_s3_object_exists(bucket_name, object_key):
 - Email delivery rate monitoring to ensure no impact from changes
 
 This enhanced data flow pattern demonstrates the integration of CloudFront signed URLs into the existing email campaign system, providing improved security, performance, and user experience for financial report distribution.
+
+## 9. S3 File Browser Data Flow Patterns (NEW - August 2025)
+
+### S3 Direct File Browser Integration
+The S3 File Browser represents a new frontend integration allowing direct user interaction with S3 storage for financial report access and bulk downloads.
+
+#### S3 File Browser Initialization and Authentication Flow
+```mermaid
+sequenceDiagram
+    participant User as CRM User
+    participant CRM as React Application
+    participant Context as S3BrowserContext
+    participant Bridge as AmplifyFirebaseBridge
+    participant Cognito as AWS Cognito
+    participant Firebase as Firebase Auth
+    participant S3 as S3 Service
+
+    User->>CRM: Navigate to Reports Download tab
+    CRM->>Context: Initialize S3BrowserContext
+    Context->>Bridge: Request AWS credentials
+    Bridge->>Firebase: Get current user token
+    Firebase-->>Bridge: Firebase ID token
+    Bridge->>Cognito: Exchange for AWS credentials
+    Cognito-->>Bridge: Temporary AWS credentials
+    Bridge-->>Context: AWS credentials available
+    Context->>S3: Initialize S3Client with credentials
+    S3-->>Context: S3Client ready
+    Context->>S3: Initial file listing request
+    S3->>S3: ListObjectsV2(prefix="", maxKeys=50)
+    S3-->>Context: File and folder listing
+    Context-->>CRM: Update UI with files
+    CRM-->>User: Display file browser interface
+```
+
+#### Hierarchical Navigation Data Flow
+```mermaid
+sequenceDiagram
+    participant User as CRM User
+    participant Table as S3FileTable
+    participant Context as S3BrowserContext
+    participant Service as S3Service
+    participant Cache as S3Cache
+    participant S3 as AWS S3
+
+    User->>Table: Click folder to navigate
+    Table->>Context: setCurrentPath(folderPath)
+    Context->>Cache: Check cached folder contents
+    alt Cache Hit
+        Cache-->>Context: Return cached file listing
+    else Cache Miss
+        Context->>Service: listFiles(folderPath)
+        Service->>S3: ListObjectsV2Command
+        Note over S3: Prefix: folderPath/<br/>Delimiter: /
+        S3-->>Service: S3 objects and common prefixes
+        Service->>Service: Transform to UI format
+        Service-->>Context: Formatted file listing
+        Context->>Cache: Store in cache (TTL: 5min)
+    end
+    Context->>Context: Update files state
+    Context-->>Table: Trigger re-render
+    Table-->>User: Display folder contents
+    
+    Note over User: Breadcrumb navigation updated
+    Context->>Context: Update breadcrumb path
+```
+
+#### File Selection and State Management Flow
+```mermaid
+graph TB
+    subgraph "User Interactions"
+        A[Individual File Select] --> B[Checkbox Toggle]
+        C[Select All Button] --> D[Bulk Selection]
+        E[Clear Selection] --> F[Reset State]
+    end
+    
+    subgraph "State Management"
+        G[S3BrowserContext]
+        H[selectedFiles: Set&lt;string&gt;]
+        I[downloadProgress: Map&lt;string, number&gt;]
+    end
+    
+    subgraph "UI Updates"
+        J[S3FileTable]
+        K[S3DownloadManager]
+        L[Breadcrumb Counter]
+    end
+    
+    B --> G
+    D --> G
+    F --> G
+    G --> H
+    G --> I
+    H --> J
+    I --> K
+    H --> L
+    
+    G --> M[Context Provider]
+    M --> N[Child Components]
+```
+
+**File Selection Implementation**:
+```typescript
+// S3BrowserContext.tsx data flow
+interface S3BrowserState {
+  currentPath: string;
+  files: S3Object[];
+  selectedFiles: Set<string>;
+  loading: boolean;
+  error: string | null;
+  downloadProgress: Map<string, number>;
+}
+
+const S3BrowserProvider: React.FC = ({ children }) => {
+  const [state, setState] = useState<S3BrowserState>({
+    currentPath: '',
+    files: [],
+    selectedFiles: new Set(),
+    loading: false,
+    error: null,
+    downloadProgress: new Map()
+  });
+
+  // File selection flow
+  const toggleFileSelection = useCallback((fileKey: string) => {
+    setState(prev => {
+      const newSelection = new Set(prev.selectedFiles);
+      if (newSelection.has(fileKey)) {
+        newSelection.delete(fileKey);
+      } else {
+        newSelection.add(fileKey);
+      }
+      
+      // Persist selection in sessionStorage for navigation
+      sessionStorage.setItem(
+        's3-selected-files',
+        JSON.stringify([...newSelection])
+      );
+      
+      return {
+        ...prev,
+        selectedFiles: newSelection
+      };
+    });
+  }, []);
+
+  // Bulk selection flow
+  const selectAllFiles = useCallback(() => {
+    setState(prev => {
+      const allFileKeys = prev.files
+        .filter(file => !file.key.endsWith('/')) // Exclude folders
+        .map(file => file.key);
+      
+      const newSelection = new Set(allFileKeys);
+      
+      sessionStorage.setItem(
+        's3-selected-files',
+        JSON.stringify([...newSelection])
+      );
+      
+      return {
+        ...prev,
+        selectedFiles: newSelection
+      };
+    });
+  }, []);
+
+  return (
+    <S3BrowserContext.Provider value={{
+      ...state,
+      toggleFileSelection,
+      selectAllFiles,
+      clearSelection,
+      updateDownloadProgress
+    }}>
+      {children}
+    </S3BrowserContext.Provider>
+  );
+};
+```
+
+#### Bulk Download Data Flow with ZIP Creation
+```mermaid
+sequenceDiagram
+    participant User as CRM User
+    participant DM as S3DownloadManager
+    participant Service as S3Service
+    participant S3 as AWS S3
+    participant ZIP as JSZip Library
+    participant FS as FileSaver
+
+    User->>DM: Click "Download Selected" (5 files)
+    DM->>DM: Initialize progress tracking
+    
+    loop For each selected file
+        DM->>Service: downloadFile(fileKey)
+        Service->>S3: GetObjectCommand with signed URL
+        S3-->>Service: File blob data
+        Service-->>DM: File blob + progress update
+        DM->>DM: updateProgress(fileKey, progress)
+        DM->>ZIP: Add file to archive
+    end
+    
+    DM->>ZIP: Generate ZIP archive
+    ZIP-->>DM: Completed ZIP blob
+    DM->>FS: SaveAs(zipBlob, filename)
+    FS-->>User: Browser download initiated
+    
+    Note over DM: Update download state
+    DM->>DM: Clear progress tracking
+    DM-->>User: Show success notification
+```
+
+**Bulk Download Implementation**:
+```typescript
+// S3DownloadManager component data flow
+const S3DownloadManager: React.FC = () => {
+  const { selectedFiles, downloadProgress, updateDownloadProgress } = useS3Browser();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleBulkDownload = async () => {
+    if (selectedFiles.size === 0) return;
+    
+    setIsDownloading(true);
+    const zip = new JSZip();
+    const totalFiles = selectedFiles.size;
+    let completedFiles = 0;
+
+    try {
+      // Process files in parallel batches of 3 to avoid overwhelming S3
+      const batchSize = 3;
+      const fileKeys = Array.from(selectedFiles);
+      
+      for (let i = 0; i < fileKeys.length; i += batchSize) {
+        const batch = fileKeys.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (fileKey) => {
+          try {
+            // Download individual file
+            const fileBlob = await s3Service.downloadFile(fileKey);
+            const fileName = fileKey.split('/').pop() || fileKey;
+            
+            // Add to ZIP
+            zip.file(fileName, fileBlob);
+            
+            completedFiles++;
+            const progress = Math.round((completedFiles / totalFiles) * 100);
+            
+            // Update progress in context
+            updateDownloadProgress(fileKey, progress);
+            
+          } catch (error) {
+            console.error(`Failed to download ${fileKey}:`, error);
+            toast.error(`Failed to download ${fileKey.split('/').pop()}`);
+          }
+        }));
+      }
+
+      // Generate ZIP archive
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+          level: 6
+        }
+      });
+
+      // Trigger browser download
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `reports-${timestamp}.zip`;
+      FileSaver.saveAs(zipBlob, filename);
+
+      toast.success(`Downloaded ${completedFiles} files as ${filename}`);
+
+    } catch (error) {
+      console.error('Bulk download failed:', error);
+      toast.error('Bulk download failed');
+    } finally {
+      setIsDownloading(false);
+      
+      // Clear progress tracking
+      selectedFiles.forEach(fileKey => {
+        updateDownloadProgress(fileKey, 0);
+      });
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Typography variant="h6">
+            {selectedFiles.size} files selected
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Download />}
+            onClick={handleBulkDownload}
+            disabled={selectedFiles.size === 0 || isDownloading}
+          >
+            {isDownloading ? 'Downloading...' : 'Download as ZIP'}
+          </Button>
+        </Box>
+        
+        {isDownloading && (
+          <Box mt={2}>
+            <Typography variant="body2">Download Progress:</Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={(Array.from(downloadProgress.values()).reduce((a, b) => a + b, 0) / selectedFiles.size)} 
+            />
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+#### S3 Error Handling and Recovery Patterns
+```mermaid
+graph TB
+    subgraph "Error Detection"
+        A[S3 Operation] --> B{Error Type?}
+        B -->|AccessDenied| C[Permission Error]
+        B -->|NoSuchKey| D[File Not Found]
+        B -->|NetworkError| E[Connectivity Issue]
+        B -->|ThrottlingException| F[Rate Limit Hit]
+    end
+    
+    subgraph "Recovery Strategies"
+        C --> G[Show auth error, suggest re-login]
+        D --> H[Remove from file list, notify user]
+        E --> I[Exponential backoff retry]
+        F --> J[Queue operation, retry after delay]
+    end
+    
+    subgraph "User Feedback"
+        G --> K[Toast Notification]
+        H --> L[File Status Update]
+        I --> M[Loading Indicator]
+        J --> N[Queued Status Badge]
+    end
+    
+    K --> O[Error Boundary Fallback]
+    L --> O
+    M --> O
+    N --> O
+```
+
+**Error Recovery Implementation**:
+```typescript
+// useS3ErrorHandler.ts - Error handling patterns
+export const useS3ErrorHandler = () => {
+  const handleS3Error = useCallback((error: any, context: ErrorContext) => {
+    const errorType = classifyS3Error(error);
+    
+    switch (errorType) {
+      case 'ACCESS_DENIED':
+        return {
+          message: 'Access denied. Please check your permissions and try logging in again.',
+          action: 'retry_auth',
+          severity: 'error' as const
+        };
+        
+      case 'NO_SUCH_KEY':
+        return {
+          message: `File "${context.fileName}" not found or has been moved.`,
+          action: 'remove_from_list',
+          severity: 'warning' as const
+        };
+        
+      case 'NETWORK_ERROR':
+        return {
+          message: 'Network connectivity issue. Retrying...',
+          action: 'retry_with_backoff',
+          severity: 'info' as const
+        };
+        
+      case 'THROTTLING':
+        return {
+          message: 'Too many requests. Please wait a moment.',
+          action: 'queue_and_retry',
+          severity: 'warning' as const
+        };
+        
+      default:
+        return {
+          message: 'An unexpected error occurred with S3 operation.',
+          action: 'log_and_notify',
+          severity: 'error' as const
+        };
+    }
+  }, []);
+
+  const retryWithBackoff = useCallback(async (
+    operation: () => Promise<any>,
+    maxRetries = 3
+  ) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (attempt === maxRetries) throw error;
+        
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }, []);
+
+  return { handleS3Error, retryWithBackoff };
+};
+
+// S3ErrorBoundary component for graceful error handling
+class S3ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error, errorInfo: null };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('S3ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Log to monitoring service
+    this.logErrorToService(error, errorInfo);
+    
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box p={3} textAlign="center">
+          <ErrorOutline color="error" sx={{ fontSize: 60, mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            S3 File Browser Error
+          </Typography>
+          <Typography variant="body1" color="text.secondary" paragraph>
+            We encountered an issue loading the file browser. This might be due to:
+          </Typography>
+          <Box component="ul" textAlign="left" display="inline-block">
+            <li>Network connectivity issues</li>
+            <li>AWS service temporarily unavailable</li>
+            <li>Authentication credentials expired</li>
+          </Box>
+          <Box mt={3} gap={2}>
+            <Button 
+              variant="contained" 
+              onClick={() => window.location.reload()}
+              startIcon={<Refresh />}
+            >
+              Retry
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => this.setState({ hasError: false, error: null })}
+              sx={{ ml: 2 }}
+            >
+              Dismiss
+            </Button>
+          </Box>
+        </Box>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+#### Performance Optimization Data Patterns
+
+**S3 Request Batching and Caching**:
+```typescript
+// S3 request optimization patterns
+class S3CacheManager {
+  private cache = new Map<string, CacheEntry>();
+  private pendingRequests = new Map<string, Promise<any>>();
+  
+  // Implement request deduplication
+  async getCachedOrFetch<T>(
+    key: string, 
+    fetcher: () => Promise<T>,
+    ttl = 300000 // 5 minutes
+  ): Promise<T> {
+    // Check cache first
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.data as T;
+    }
+    
+    // Check for pending request to avoid duplicates
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key) as Promise<T>;
+    }
+    
+    // Create new request
+    const request = fetcher().then(data => {
+      this.cache.set(key, {
+        data,
+        timestamp: Date.now()
+      });
+      this.pendingRequests.delete(key);
+      return data;
+    }).catch(error => {
+      this.pendingRequests.delete(key);
+      throw error;
+    });
+    
+    this.pendingRequests.set(key, request);
+    return request;
+  }
+  
+  // Intelligent prefetching based on user behavior
+  prefetchNextPage(currentPath: string, currentItems: S3Object[]): void {
+    if (currentItems.length === 50) { // Full page, likely more items
+      const nextContinuationToken = this.extractContinuationToken(currentItems);
+      if (nextContinuationToken) {
+        // Prefetch in background
+        setTimeout(() => {
+          this.getCachedOrFetch(
+            `${currentPath}-page-${nextContinuationToken}`,
+            () => this.listObjectsWithToken(currentPath, nextContinuationToken)
+          );
+        }, 1000);
+      }
+    }
+  }
+}
+```
+
+This comprehensive S3 File Browser data flow documentation demonstrates the integration patterns, state management, error handling, and performance optimization strategies for the new direct S3 frontend integration within the Distro Nation CRM application.

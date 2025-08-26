@@ -101,6 +101,186 @@ configparser>=5.3.0
 
 **Lambda Layer**: Python 3.12 compatible `cryptography` layer (~5.4MB)
 
+## AWS S3 SDK Direct Integration (NEW)
+
+### S3 File Browser Implementation
+**Purpose**: Direct frontend S3 integration for financial report browsing and bulk downloads  
+**Implementation**: `@aws-sdk/client-s3` v3.x.x  
+**Used By**: S3 File Browser module (`/components/s3/`)  
+**Authentication**: AWS Amplify + Firebase bridge for credential management
+
+#### S3Service Implementation
+**Location**: `src/services/S3Service.ts`  
+**Dependencies**:
+```typescript
+import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+```
+
+**Core Methods**:
+```typescript
+interface S3ServiceInterface {
+  // File listing with hierarchical navigation
+  listFiles(prefix?: string, maxKeys?: number): Promise<S3Object[]>;
+  
+  // Individual file download via signed URLs
+  downloadFile(key: string): Promise<Blob>;
+  
+  // Secure signed URL generation
+  generateSignedUrl(key: string, expiresIn?: number): Promise<string>;
+  
+  // Path validation and security
+  validatePath(path: string): boolean;
+  
+  // File metadata retrieval
+  getFileMetadata(key: string): Promise<S3Metadata>;
+}
+```
+
+#### Authentication and Security
+**Credential Management**: 
+- Primary: Firebase Authentication
+- AWS Integration: Amplify + Cognito Identity Pool
+- Bridge Service: `amplifyFirebaseBridge.ts`
+
+**Security Features**:
+```typescript
+interface S3SecurityConfig {
+  // Time-limited signed URLs (default: 1 hour)
+  signedUrlExpiration: 3600;
+  
+  // Path traversal prevention
+  pathValidation: RegExp;
+  
+  // File type restrictions
+  allowedFileTypes: string[];
+  
+  // Maximum file size for downloads
+  maxFileSize: number;
+  
+  // Bucket access policies
+  bucketPolicy: S3BucketPolicy;
+}
+```
+
+**S3 Bucket Configuration**:
+```yaml
+# Required Environment Variables
+REACT_APP_S3_BUCKET: distro-nation-reports
+REACT_APP_S3_REGION: <REGION>
+REACT_APP_S3_IDENTITY_POOL_ID: <REGION>:6ae2de80-824a-43d4-aef7-b825ef284cf5
+
+# Bucket Policy (Applied via AWS Console)
+- Effect: Allow
+- Principal: Authenticated Cognito users only
+- Actions: s3:GetObject, s3:ListBucket
+- Resources: arn:aws:s3:::distro-nation-reports/*
+```
+
+**CORS Configuration**:
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedOrigins": ["https://crm.distro-nation.com"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+#### File Browser Operations
+
+**Hierarchical Navigation**:
+```typescript
+// List files and folders with prefix-based navigation
+const listFiles = async (prefix = '', delimiter = '/') => {
+  const command = new ListObjectsV2Command({
+    Bucket: process.env.REACT_APP_S3_BUCKET,
+    Prefix: prefix,
+    Delimiter: delimiter,
+    MaxKeys: 100
+  });
+  return await s3Client.send(command);
+};
+```
+
+**Bulk Download Implementation**:
+```typescript
+// ZIP creation for multiple files
+import JSZip from 'jszip';
+import FileSaver from 'file-saver';
+
+const downloadBulkFiles = async (selectedFiles: string[]) => {
+  const zip = new JSZip();
+  
+  for (const fileKey of selectedFiles) {
+    const fileBlob = await downloadFile(fileKey);
+    const fileName = fileKey.split('/').pop();
+    zip.file(fileName, fileBlob);
+  }
+  
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  FileSaver.saveAs(zipBlob, `reports-${Date.now()}.zip`);
+};
+```
+
+**Progress Tracking**:
+```typescript
+interface DownloadProgress {
+  fileKey: string;
+  progress: number; // 0-100
+  status: 'pending' | 'downloading' | 'completed' | 'error';
+  error?: string;
+}
+```
+
+#### Error Handling and Resilience
+
+**S3 Error Types Handled**:
+```typescript
+enum S3ErrorTypes {
+  AccessDenied = 'Insufficient permissions to access file',
+  NoSuchKey = 'File not found or has been moved',
+  NetworkError = 'Network connectivity issue',
+  InvalidRequest = 'Invalid file path or request',
+  ThrottlingException = 'Too many requests, please try again'
+}
+```
+
+**Retry Logic**:
+- **Exponential Backoff**: 2^attempt * 1000ms delay
+- **Max Retries**: 3 attempts
+- **Retry Conditions**: Network errors, throttling, temporary failures
+- **Circuit Breaker**: Disable service temporarily after repeated failures
+
+#### Performance Optimizations
+
+**Caching Strategy**:
+```typescript
+// File listing cache with TTL
+const fileListCache = new Map<string, {
+  data: S3Object[];
+  timestamp: number;
+  ttl: number; // 5 minutes
+}>();
+
+// Prefetch next page for pagination
+const prefetchNextPage = async (currentPrefix: string) => {
+  // Background prefetch logic
+};
+```
+
+**Pagination Support**:
+```typescript
+interface PaginationOptions {
+  maxKeys: 50; // Files per page
+  continuationToken?: string;
+  prefetchNext: true;
+}
+```
+
 ## Third-Party API Integrations
 
 ### Mailgun API Integration
