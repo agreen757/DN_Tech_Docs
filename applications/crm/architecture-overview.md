@@ -33,10 +33,17 @@ The Distro Nation CRM is a React TypeScript web application that serves as the a
 ```
 App (Root)
 ├── AuthProvider (Global State)
+├── S3BrowserProvider (S3 Context State)
 ├── Layout (Protected Routes)
 │   ├── Dashboard (Landing Page)
 │   ├── Mailer Module
-│   │   ├── MailerTemplate (Email Creation)
+│   │   ├── MailerTemplate (Email Creation & Reports Download)
+│   │   │   ├── Email Template Tab (Email Creation)
+│   │   │   └── Reports Download Tab (S3 File Browser)
+│   │   │       ├── S3FileBrowser (Main File Browser Interface)
+│   │   │       ├── S3FileTable (File Listing with DataGrid)
+│   │   │       ├── S3BreadcrumbNav (Folder Navigation)
+│   │   │       └── S3DownloadManager (Download Progress)
 │   │   ├── MailerLogs (Campaign Tracking)
 │   │   └── MailerLayout (Module Container)
 │   ├── Outreach Module
@@ -60,9 +67,18 @@ App (Root)
 - **Profile.tsx**: User profile management and settings
 
 #### 2. Mailer Module (`/components/mailer/`)
-- **MailerTemplate.tsx**: Email campaign creation with rich text editing
+- **MailerTemplate.tsx**: Tabbed interface for email campaign creation and financial report downloads
+  - **Email Template Tab**: Rich text email editing with React Quill
+  - **Reports Download Tab**: S3 file browser for financial report access
 - **MailerLogs.tsx**: Campaign performance tracking and analytics
 - **MailerLayout.tsx**: Module-specific layout and navigation
+
+#### 2a. S3 File Browser Module (`/components/s3/`)
+- **S3FileBrowser.tsx**: Main file browser interface with folder navigation
+- **S3FileTable.tsx**: Material-UI DataGrid for file listing and selection
+- **S3BreadcrumbNav.tsx**: Hierarchical navigation breadcrumb component
+- **S3DownloadManager.tsx**: Download progress tracking and bulk ZIP creation
+- **S3ErrorBoundary.tsx**: Error handling specific to S3 operations
 
 #### 3. Outreach Module (`/components/outreach/`)
 - **OutreachPage.tsx**: Comprehensive outreach campaign management
@@ -86,12 +102,22 @@ App (Root)
 6. User granted access to protected application areas
 
 ### Email Campaign Flow
-1. User navigates to MailerTemplate component
+1. User navigates to MailerTemplate component (Email Template tab)
 2. Component fetches user list from dn-api (`/dn_users_list`)
 3. User creates email content using React Quill editor
 4. Campaign data submitted to dn-api (`/send-mail`) endpoint
 5. Email sent via Mailgun integration
 6. Campaign tracking logged for analytics
+
+### S3 File Browser Flow
+1. User navigates to MailerTemplate component (Reports Download tab)
+2. S3FileBrowser component initializes with AWS credentials via Amplify-Firebase bridge
+3. Component fetches S3 bucket contents using `listObjectsV2` with hierarchical navigation
+4. User browses folders using breadcrumb navigation and file table
+5. User selects individual files or bulk selects multiple files
+6. Download initiated using signed URLs for individual files or ZIP creation for bulk downloads
+7. Download progress tracked and displayed via S3DownloadManager
+8. Error handling managed through S3ErrorBoundary and toast notifications
 
 ### Data Synchronization
 - **Real-time Updates**: Firebase integration for live data updates
@@ -104,8 +130,11 @@ App (Root)
 ### AWS Services Integration
 - **API Gateway**: Primary backend communication via dn-api
 - **Lambda Functions**: Serverless compute for business logic
-- **Cognito**: Additional authentication provider
-- **S3**: File storage for email templates and assets
+- **Cognito**: Additional authentication provider and S3 access credentials
+- **S3**: File storage for email templates, assets, and financial report downloads
+  - **@aws-sdk/client-s3**: Direct S3 SDK integration for file operations
+  - **Signed URLs**: Time-limited secure file access
+  - **Hierarchical Navigation**: Folder-based file browsing with pagination
 
 ### Firebase Services Integration
 - **Authentication**: Primary identity provider
