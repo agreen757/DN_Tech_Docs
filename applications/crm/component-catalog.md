@@ -192,7 +192,7 @@ This document provides a comprehensive catalog of all React components within th
 ## Mailer Module (`/components/mailer/`)
 
 ### MailerTemplate.tsx
-**Purpose**: Email campaign creation and management
+**Purpose**: Tabbed interface for email campaign creation and financial report downloads
 **Location**: `src/components/mailer/MailerTemplate.tsx`
 **Props**: None
 **State Management**:
@@ -217,18 +217,23 @@ interface NewsletterFormData {
 - axios for API communication
 - dn-api configuration
 - Material-UI form components
+- Material-UI Tabs for tabbed interface
+- S3FileBrowser component for Reports tab
 
 **Key Features**:
-- Rich text email content editing
+- **Email Template Tab**: Rich text email content editing
+- **Reports Download Tab**: S3 file browser for financial report access
 - User list loading from dn-api
 - Recipient selection (individual or bulk)
 - Email preview functionality
 - Campaign scheduling options
 - Template management (financial/newsletter)
+- File browsing and bulk download capabilities
 
 **API Integration**:
 - `GET /dn_users_list`: Fetch recipient list
 - `POST /send-mail`: Send email campaign
+- AWS S3 SDK for file operations
 
 ### MailerLogs.tsx
 **Purpose**: Email campaign tracking and analytics
@@ -272,7 +277,136 @@ interface NewsletterFormData {
 - Template Creation
 - Campaign Logs
 - Template Library
+- Reports Download
 - Settings
+
+## S3 File Browser Module (`/components/s3/`)
+
+### S3FileBrowser.tsx
+**Purpose**: Main S3 file browser interface with hierarchical navigation
+**Location**: `src/components/s3/S3FileBrowser.tsx`
+**Props**: None
+**Dependencies**:
+- S3BrowserContext for state management
+- S3FileTable component
+- S3BreadcrumbNav component
+- S3DownloadManager component
+- S3Service for AWS operations
+
+**Key Features**:
+- Hierarchical folder navigation
+- File selection and bulk operations
+- Integration with S3BrowserContext for state management
+- Error handling through S3ErrorBoundary
+- Loading states with skeleton placeholders
+
+**State Management**:
+```typescript
+interface S3BrowserState {
+  currentPath: string;
+  files: S3Object[];
+  selectedFiles: Set<string>;
+  loading: boolean;
+  error: string | null;
+  downloadProgress: Map<string, number>;
+}
+```
+
+### S3FileTable.tsx
+**Purpose**: Material-UI DataGrid for file listing and selection
+**Location**: `src/components/s3/S3FileTable.tsx`
+**Props**:
+- `files`: Array of S3 file objects
+- `onFileSelect`: File selection handler
+- `onFolderNavigate`: Folder navigation handler
+**Dependencies**:
+- Material-UI X DataGrid
+- File type icon mapping
+- Custom cell renderers
+
+**Features**:
+- Sortable columns (Name, Size, Last Modified, Type)
+- Checkbox-based multi-selection
+- File type icons and folder indicators
+- Custom actions column with download buttons
+- Responsive design for mobile devices
+- Pagination support for large directories
+
+**Column Configuration**:
+```typescript
+interface S3FileColumns {
+  selection: CheckboxColumn;
+  name: FileNameColumn;
+  size: FileSizeColumn;
+  lastModified: DateColumn;
+  type: FileTypeColumn;
+  actions: ActionsColumn;
+}
+```
+
+### S3BreadcrumbNav.tsx
+**Purpose**: Hierarchical navigation breadcrumb component
+**Location**: `src/components/s3/S3BreadcrumbNav.tsx`
+**Props**:
+- `currentPath`: Current S3 path
+- `onNavigate`: Path navigation handler
+**Dependencies**:
+- Material-UI Breadcrumbs
+- Path parsing utilities
+
+**Features**:
+- Interactive path segments
+- Home/root navigation
+- Path validation and sanitization
+- Responsive breadcrumb display
+- Keyboard navigation support
+
+### S3DownloadManager.tsx
+**Purpose**: Download progress tracking and bulk ZIP creation
+**Location**: `src/components/s3/S3DownloadManager.tsx`
+**Props**:
+- `selectedFiles`: Set of selected file keys
+- `onDownloadComplete`: Completion handler
+**Dependencies**:
+- JSZip for bulk archive creation
+- FileSaver.js for browser downloads
+- Progress tracking utilities
+
+**Features**:
+- Individual file download with signed URLs
+- Bulk ZIP download for multiple files
+- Real-time download progress indicators
+- Error handling and retry mechanisms
+- Download cancellation support
+- Progress notifications via toast system
+
+**Download Types**:
+```typescript
+interface DownloadOptions {
+  individual: SignedUrlDownload;
+  bulk: ZipArchiveDownload;
+  progress: ProgressTracking;
+  retry: RetryMechanism;
+}
+```
+
+### S3ErrorBoundary.tsx
+**Purpose**: Error handling specific to S3 operations
+**Location**: `src/components/s3/S3ErrorBoundary.tsx`
+**Props**:
+- `children`: Components to protect
+- `fallback`: Error display component
+**Dependencies**:
+- React Error Boundary API
+- S3-specific error handling
+
+**Error Handling**:
+- S3 access permission errors
+- Network connectivity issues
+- File not found errors
+- Download failure recovery
+- User-friendly error messages
+- Automatic retry suggestions
 
 ## Outreach Module (`/components/outreach/`)
 
@@ -561,6 +695,42 @@ interface NewsletterFormData {
 - Version control for templates
 - Template sharing and collaboration
 
+### S3Service.ts
+**Purpose**: AWS S3 integration service for file operations
+**Location**: `src/services/S3Service.ts`
+**Dependencies**:
+- @aws-sdk/client-s3
+- AWS Amplify for credentials
+- Signed URL generation utilities
+- File validation and security utilities
+
+**Core Functions**:
+```typescript
+interface S3ServiceMethods {
+  listFiles(prefix?: string): Promise<S3Object[]>;
+  downloadFile(key: string): Promise<Blob>;
+  generateSignedUrl(key: string): Promise<string>;
+  validatePath(path: string): boolean;
+  getFileMetadata(key: string): Promise<S3Metadata>;
+}
+```
+
+**Key Features**:
+- Hierarchical file listing with `listObjectsV2`
+- Secure signed URL generation for downloads
+- File path validation and sanitization
+- Pagination support for large directories
+- Error handling and retry logic
+- Credentials management via Amplify-Firebase bridge
+- Security validation for all file operations
+
+**Security Implementation**:
+- Path traversal prevention
+- File access validation
+- Time-limited signed URLs
+- Credential security with AWS Cognito
+- Error message sanitization
+
 ## Utility Components
 
 ### Context Providers
@@ -573,6 +743,33 @@ interface NewsletterFormData {
 - Authentication methods
 - Role-based permissions
 - Session management
+
+#### S3BrowserContext.tsx
+**Purpose**: S3 file browser state management
+**Location**: `src/contexts/S3BrowserContext.tsx`
+**Provides**:
+- Current path state
+- File listing data
+- Selected files state
+- Download progress tracking
+- Error state management
+
+**Context State**:
+```typescript
+interface S3BrowserContextValue {
+  currentPath: string;
+  setCurrentPath: (path: string) => void;
+  files: S3Object[];
+  loading: boolean;
+  error: string | null;
+  selectedFiles: Set<string>;
+  toggleFileSelection: (key: string) => void;
+  selectAllFiles: () => void;
+  clearSelection: () => void;
+  downloadProgress: Map<string, number>;
+  updateDownloadProgress: (key: string, progress: number) => void;
+}
+```
 
 ### Custom Hooks
 
@@ -602,6 +799,39 @@ interface NewsletterFormData {
 **Purpose**: Outreach form state management
 **Location**: `src/hooks/useOutreachForm.ts`
 **Returns**: Form state and validation utilities
+
+#### useS3Service.ts
+**Purpose**: S3 service integration hook
+**Location**: `src/hooks/useS3Service.ts`
+**Returns**: S3 service methods and state management
+**Features**:
+- S3Service instance with error handling
+- File listing and navigation utilities
+- Download management and progress tracking
+- Path validation and security checks
+
+#### useS3ErrorHandler.ts
+**Purpose**: S3-specific error handling hook
+**Location**: `src/hooks/useS3ErrorHandler.ts`
+**Parameters**:
+- `error`: S3 error object
+- `context`: Error context information
+**Returns**: 
+- Formatted error messages
+- User-friendly error descriptions
+- Retry suggestions and actions
+- Error reporting utilities
+
+**Error Types Handled**:
+```typescript
+interface S3ErrorTypes {
+  AccessDenied: PermissionError;
+  NoSuchKey: FileNotFoundError;
+  NetworkError: ConnectivityError;
+  InvalidRequest: ValidationError;
+  ThrottlingException: RateLimitError;
+}
+```
 
 ## Component Integration Patterns
 
