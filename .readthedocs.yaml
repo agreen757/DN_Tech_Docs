@@ -8,10 +8,19 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
+  jobs:
+    post_checkout:
+      # Create _static/images directory if it doesn't exist
+      - mkdir -p _static/images/crm
+      - mkdir -p _static/images/youtube-cms
+      # Copy images from applications to _static if needed
+      - cp -n applications/crm/diagrams/*.png _static/images/crm/ || true
+      - cp -n applications/youtube-cms/diagrams/*.png _static/images/youtube-cms/ || true
 
 # Build documentation in the root directory with Sphinx
 sphinx:
    configuration: conf.py
+   fail_on_warning: false
 
 # Optionally declare the Python requirements required to build your docs
 python:
@@ -20,5 +29,5 @@ python:
 
 # Optional but recommended, declare the formats you want to build
 formats:
-  - pdf
   - htmlzip
+  - pdf

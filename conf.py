@@ -22,6 +22,9 @@ extensions = [
     'sphinx_design',
 ]
 
+# Set the master document
+master_doc = 'index'
+
 # MyST parser configuration
 myst_enable_extensions = [
     "amsmath",
@@ -81,6 +84,9 @@ html_theme_options = {
 html_css_files = [
     'custom.css',
 ]
+
+# Ensure images are properly handled
+html_extra_path = []
 
 # -- Options for PDF output -------------------------------------------------
 latex_engine = 'pdflatex'
