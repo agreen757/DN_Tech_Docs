@@ -1,0 +1,32 @@
+# AWS Account ID Sanitization Mapping
+# This file documents the replacements made during security remediation
+# Status: PHASE 1 COMPLETED - All 18 files sanitized, 49 total occurrences replaced
+
+## Primary Account ID Replacement
+<AWS_ACCOUNT_ID> => <AWS_ACCOUNT_ID> (COMPLETED - 49 occurrences across 18 files)
+
+## API Gateway ID Replacements  
+<API_GATEWAY_ID_1> => <API_GATEWAY_ID_1> (COMPLETED - All occurrences replaced)
+<API_GATEWAY_ID_2> => <API_GATEWAY_ID_2> (COMPLETED - All occurrences replaced)
+
+## Resource-Specific Replacements
+database-2-cluster => <DATABASE_CLUSTER_NAME>
+amplify-dnbackendfunctions-dev-57767 => <AMPLIFY_PROJECT_NAME>
+amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL => <ECS_CLUSTER_NAME>
+
+## ARN Template Patterns
+arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:sns:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:iam::<AWS_ACCOUNT_ID>:* => arn:aws:iam::<AWS_ACCOUNT_ID>:*
+arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:execute-api:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:rds:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:rds:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:secretsmanager:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:lambda:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:lambda:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:ecs:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:ecs:<REGION>:<AWS_ACCOUNT_ID>:*
+arn:aws:acm:us-east-1:<AWS_ACCOUNT_ID>:* => arn:aws:acm:<REGION>:<AWS_ACCOUNT_ID>:*
+
+## ECR URI Replacements
+<AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com => <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com
+
+## Specific Resource Name Replacements
+your-mfa-device => <MFA_DEVICE_NAME>
+prod/distronation => <SECRETS_PATH>

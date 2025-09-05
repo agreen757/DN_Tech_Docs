@@ -242,7 +242,7 @@ Security Certificates:
       "Effect": "Allow",
       "Action": ["secretsmanager:GetSecretValue"],
       "Resource": [
-        "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:prod/distronation/*"
+        "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:<SECRETS_PATH>/*"
       ],
       "Condition": {
         "StringEquals": {

@@ -163,7 +163,7 @@ for bucket in "${CRITICAL_BUCKETS[@]}"; do
     aws s3api put-bucket-versioning \
       --bucket "$bucket" \
       --versioning-configuration Status=Enabled,MFADelete=Enabled \
-      --mfa "arn:aws:iam::<AWS_ACCOUNT_ID>:mfa/your-mfa-device 123456"
+      --mfa "arn:aws:iam::<AWS_ACCOUNT_ID>:mfa/<MFA_DEVICE_NAME> 123456"
   fi
 
   echo "Versioning enabled for $bucket"
