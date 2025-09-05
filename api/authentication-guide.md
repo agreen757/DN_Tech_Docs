@@ -378,7 +378,7 @@ Each Lambda function has an IAM execution role that defines its permissions:
         "rds-data:ExecuteStatement",
         "rds-data:RollbackTransaction"
       ],
-      "Resource": "arn:aws:rds:<REGION>:<AWS_ACCOUNT_ID>:cluster:database-2-cluster"
+      "Resource": "arn:aws:rds:<REGION>:<AWS_ACCOUNT_ID>:cluster:<DATABASE_CLUSTER_NAME>"
     },
     {
       "Effect": "Allow",
@@ -386,7 +386,7 @@ Each Lambda function has an IAM execution role that defines its permissions:
         "secretsmanager:GetSecretValue"
       ],
       "Resource": [
-        "arn:aws:secretsmanager:<REGION>:<AWS_ACCOUNT_ID>:secret:prod/distronation/*"
+        "arn:aws:secretsmanager:<REGION>:<AWS_ACCOUNT_ID>:secret:<SECRETS_PATH>/*"
       ]
     }
   ]

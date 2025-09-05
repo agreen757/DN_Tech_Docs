@@ -89,7 +89,7 @@ The custom ID cleanup process uses an event-driven architecture with two sequent
 - **Platform**: AWS Fargate
 - **CPU**: 2048 units (2 vCPU)
 - **Memory**: 4096 MB (4 GB)
-- **Container Image**: `<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-channelbackfill-api:latest`
+- **Container Image**: `<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<AMPLIFY_PROJECT_NAME>-api-channelbackfill-api:latest`
 - **Execution Time**: ~10-15 minutes for typical dataset
 
 **cmsCustomidCleanup Task**:
@@ -97,7 +97,7 @@ The custom ID cleanup process uses an event-driven architecture with two sequent
 - **Platform**: AWS Fargate
 - **CPU**: 4096 units (4 vCPU)
 - **Memory**: 8192 MB (8 GB)
-- **Container Image**: `<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-cmscustomidupdate-api:latest`
+- **Container Image**: `<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<AMPLIFY_PROJECT_NAME>-api-cmscustomidupdate-api:latest`
 - **Execution Time**: ~2-4 hours for 38,000+ video dataset
 
 #### Network Configuration
