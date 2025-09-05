@@ -1,33 +1,35 @@
-# Read the Docs configuration file for Distro Nation Infrastructure Documentation
+# .readthedocs.yaml
+# Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
+# Required
 version: 2
 
-# Set the OS, Python version and other tools you might need
+# Set the version of Python and other tools you might need
 build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
   jobs:
-    post_checkout:
-      # Create _static/images directory if it doesn't exist
+    pre_build:
+      # Create necessary directories for images if they don't exist
       - mkdir -p _static/images/crm
       - mkdir -p _static/images/youtube-cms
-      # Copy images from applications to _static if needed
+      # Copy images from application directories if needed
       - cp -n applications/crm/diagrams/*.png _static/images/crm/ || true
       - cp -n applications/youtube-cms/diagrams/*.png _static/images/youtube-cms/ || true
 
-# Build documentation in the root directory with Sphinx
+# Build documentation in the docs/ directory with Sphinx
 sphinx:
-   configuration: conf.py
-   fail_on_warning: false
+  configuration: conf.py
+  fail_on_warning: false
 
 # Optionally declare the Python requirements required to build your docs
 python:
-   install:
-   - requirements: requirements.txt
+  install:
+    - requirements: requirements.txt
 
-# Optional but recommended, declare the formats you want to build
+# Build documentation in additional formats such as PDF
 formats:
   - htmlzip
   - pdf
