@@ -3,8 +3,6 @@ Distro Nation Infrastructure Documentation
 
 This repository contains comprehensive technical documentation of the Distro Nation infrastructure environment and technical roadmap.
 
-Please see the full documentation at: https://distro-nation-infrastructure-documentation.readthedocs.io/
-
 Contents
 --------
 
