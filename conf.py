@@ -24,6 +24,11 @@ extensions = [
 
 # Set the master document
 master_doc = 'index'
+root_doc = 'index'
+
+# ReadTheDocs specific configuration
+import os
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # MyST parser configuration
 myst_enable_extensions = [
@@ -85,8 +90,15 @@ html_css_files = [
     'custom.css',
 ]
 
-# Ensure images are properly handled
-html_extra_path = []
+# ReadTheDocs specific settings
+if on_rtd:
+    html_theme = 'sphinx_rtd_theme'
+    html_context = {
+        'display_github': True,
+        'github_user': 'agreen757',
+        'github_repo': 'distro-nation-infrastructure-docs',
+        'github_version': 'main',
+    }
 
 # -- Options for PDF output -------------------------------------------------
 latex_engine = 'pdflatex'
