@@ -65,23 +65,23 @@ Custom Domain Records (recommended):
 ```yaml
 API Gateway DNS Configuration:
   dn-api Gateway:
-    Default Endpoint: cjed05n28l.execute-api.us-east-1.amazonaws.com
+    Default Endpoint: <API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
     Stage: staging
     
   Custom Domain (recommended):
     api-admin.distronation.com:
       Type: ALIAS
-      Target: cjed05n28l.execute-api.us-east-1.amazonaws.com
+      Target: <API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
       SSL Certificate: *.distronation.com
       
   distronationfmGeneralAccess Gateway:
-    Default Endpoint: hmuujzief2.execute-api.us-east-1.amazonaws.com
+    Default Endpoint: <API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com
     Stage: main
     
   Custom Domain (recommended):
     api.distrofm.com:
       Type: ALIAS
-      Target: hmuujzief2.execute-api.us-east-1.amazonaws.com
+      Target: <API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com
       SSL Certificate: *.distrofm.com
 ```
 

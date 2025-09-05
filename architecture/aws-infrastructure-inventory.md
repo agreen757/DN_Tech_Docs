@@ -1,6 +1,6 @@
 # AWS Infrastructure Inventory
 
-**Account ID:** 867653852961  
+**Account ID:** <AWS_ACCOUNT_ID>  
 **Primary Region:** us-east-1  
 **User:** dnadmin
 
@@ -18,7 +18,7 @@
 ### ECS Clusters
 | Cluster Name | ARN | Status | Platform | Purpose |
 |-------------|-----|--------|----------|---------|
-| amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL | arn:aws:ecs:us-east-1:867653852961:cluster/amplify-dnbackendfunctions-dev-57767-NetworkStack-1WQ2JX5JBEL8C-Cluster-o2oPTAWsP4AL | **active** | AWS Fargate | Long-running tasks and batch processing |
+| <ECS_CLUSTER_NAME> | arn:aws:ecs:us-east-1:<AWS_ACCOUNT_ID>:cluster/<ECS_CLUSTER_NAME> | **active** | AWS Fargate | Long-running tasks and batch processing |
 
 ### ECS Task Definitions
 | Task Definition | Revision | CPU | Memory | Purpose |
@@ -29,8 +29,8 @@
 ### Container Registry (ECR)
 | Repository Name | URI | Purpose |
 |----------------|-----|---------|
-| amplify-dnbackendfunctions-dev-57767-api-channelbackfill-api | 867653852961.dkr.ecr.us-east-1.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-channelbackfill-api | Channel backfill container images |
-| amplify-dnbackendfunctions-dev-57767-api-cmscustomidupdate-api | 867653852961.dkr.ecr.us-east-1.amazonaws.com/amplify-dnbackendfunctions-dev-57767-api-cmscustomidupdate-api | CMS custom ID cleanup container images |
+| <AMPLIFY_PROJECT_NAME>-api-channelbackfill-api | <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/<AMPLIFY_PROJECT_NAME>-api-channelbackfill-api | Channel backfill container images |
+| <AMPLIFY_PROJECT_NAME>-api-cmscustomidupdate-api | <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/<AMPLIFY_PROJECT_NAME>-api-cmscustomidupdate-api | CMS custom ID cleanup container images |
 
 ### Lambda Functions (Key Functions - 82 total, 2 migrated to ECS)
 | Function | Runtime | Purpose | Migration Status |
@@ -83,8 +83,8 @@
 ### API Gateway
 | API Name | ID | Created |
 |----------|----|---------| 
-| dn-api | cjed05n28l | 2024-02-08 |
-| distronationfmGeneralAccess | hmuujzief2 | 2024-06-14 |
+| dn-api | <API_GATEWAY_ID_2> | 2024-02-08 |
+| distronationfmGeneralAccess | <API_GATEWAY_ID_1> | 2024-06-14 |
 
 ### Route53 Hosted Zones
 | Zone | ID |

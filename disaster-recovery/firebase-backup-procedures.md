@@ -1492,7 +1492,7 @@ set -e  # Exit on any error
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_ROOT_DIR="./firebase-backups/$TIMESTAMP"
 PROJECT_ID="your-firebase-project-id"
-NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:867653852961:firebase-backup-alerts"
+NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:firebase-backup-alerts"
 
 echo "=== Starting Comprehensive Firebase Backup ==="
 echo "Project ID: $PROJECT_ID"
@@ -1871,7 +1871,7 @@ Report Timestamp: {report['timestamp']}
 """
 
         sns.publish(
-            TopicArn='arn:aws:sns:us-east-1:867653852961:firebase-backup-alerts',
+            TopicArn='arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:firebase-backup-alerts',
             Message=message,
             Subject=f'Firebase Backup Health Alert - {health_percentage:.1f}%'
         )

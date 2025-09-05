@@ -6,9 +6,9 @@ This document provides step-by-step implementation guidance for securing the dn-
 ## Critical Vulnerability Details
 
 ### Affected API
-- **API Gateway ID**: `cjed05n28l`
-- **Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging`
-- **Account ID**: 867653852961
+- **API Gateway ID**: `<API_GATEWAY_ID_2>`
+- **Base URL**: `https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging`
+- **Account ID**: <AWS_ACCOUNT_ID>
 - **Region**: us-east-1
 
 ### Vulnerable Endpoints (9 total)
@@ -32,7 +32,7 @@ This document provides step-by-step implementation guidance for securing the dn-
 #### 1.1 Create API Keys
 ```bash
 # Navigate to AWS API Gateway Console
-# API Gateway > APIs > dn-api (cjed05n28l) > API Keys
+# API Gateway > APIs > dn-api (<API_GATEWAY_ID_2>) > API Keys
 
 # Create API Keys via AWS CLI
 aws apigateway create-api-key \
@@ -287,7 +287,7 @@ zip lambda-authorizer-apikey.zip lambda-authorizer-apikey.js
 aws lambda create-function \
     --function-name dn-api-authorizer \
     --runtime nodejs18.x \
-    --role arn:aws:iam::867653852961:role/dn-api-authorizer-role \
+    --role arn:aws:iam::<AWS_ACCOUNT_ID>:role/dn-api-authorizer-role \
     --handler lambda-authorizer-apikey.handler \
     --zip-file fileb://lambda-authorizer-apikey.zip \
     --description "API key authorizer for dn-api security" \
@@ -299,7 +299,7 @@ aws lambda add-permission \
     --statement-id api-gateway-invoke \
     --action lambda:InvokeFunction \
     --principal apigateway.amazonaws.com \
-    --source-arn "arn:aws:execute-api:us-east-1:867653852961:cjed05n28l/*/POST/*" \
+    --source-arn "arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:<API_GATEWAY_ID_2>/*/POST/*" \
     --region us-east-1
 
 aws lambda add-permission \
@@ -307,7 +307,7 @@ aws lambda add-permission \
     --statement-id api-gateway-invoke-get \
     --action lambda:InvokeFunction \
     --principal apigateway.amazonaws.com \
-    --source-arn "arn:aws:execute-api:us-east-1:867653852961:cjed05n28l/*/GET/*" \
+    --source-arn "arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:<API_GATEWAY_ID_2>/*/GET/*" \
     --region us-east-1
 ```
 
@@ -317,10 +317,10 @@ aws lambda add-permission \
 ```bash
 # Create authorizer in API Gateway
 aws apigateway create-authorizer \
-    --rest-api-id cjed05n28l \
+    --rest-api-id <API_GATEWAY_ID_2> \
     --name dn-api-key-authorizer \
     --type REQUEST \
-    --authorizer-uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:867653852961:function:dn-api-authorizer/invocations \
+    --authorizer-uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:<AWS_ACCOUNT_ID>:function:dn-api-authorizer/invocations \
     --identity-source method.request.header.x-api-key \
     --authorizer-result-ttl-in-seconds 300 \
     --region us-east-1
@@ -332,21 +332,21 @@ For each endpoint, update the method to require API key and use the authorizer:
 ```bash
 # Example for POST /channels
 aws apigateway update-method \
-    --rest-api-id cjed05n28l \
+    --rest-api-id <API_GATEWAY_ID_2> \
     --resource-id [RESOURCE_ID] \
     --http-method POST \
     --patch-ops op=replace,path=/apiKeyRequired,value=true \
     --region us-east-1
 
 aws apigateway update-method \
-    --rest-api-id cjed05n28l \
+    --rest-api-id <API_GATEWAY_ID_2> \
     --resource-id [RESOURCE_ID] \
     --http-method POST \
     --patch-ops op=replace,path=/authorizationType,value=CUSTOM \
     --region us-east-1
 
 aws apigateway update-method \
-    --rest-api-id cjed05n28l \
+    --rest-api-id <API_GATEWAY_ID_2> \
     --resource-id [RESOURCE_ID] \
     --http-method POST \
     --patch-ops op=replace,path=/authorizerId,value=[AUTHORIZER_ID] \
@@ -424,7 +424,7 @@ aws cloudwatch put-metric-alarm \
     --threshold 10 \
     --comparison-operator GreaterThanThreshold \
     --evaluation-periods 1 \
-    --alarm-actions arn:aws:sns:us-east-1:867653852961:security-alerts \
+    --alarm-actions arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:security-alerts \
     --region us-east-1
 
 # Alarm for unusual API usage
@@ -438,7 +438,7 @@ aws cloudwatch put-metric-alarm \
     --threshold 50 \
     --comparison-operator GreaterThanThreshold \
     --evaluation-periods 2 \
-    --alarm-actions arn:aws:sns:us-east-1:867653852961:security-alerts \
+    --alarm-actions arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:security-alerts \
     --region us-east-1
 ```
 
@@ -478,19 +478,19 @@ await publishSecurityMetric('API_KEY_VALIDATED');
 #### 6.1 Test API Key Authentication
 ```bash
 # Test without API key (should fail)
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow"
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow"
 
 # Test with valid API key (should succeed)
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow" \
   -H "x-api-key: YOUR_API_KEY_HERE"
 
 # Test user listing endpoint (sensitive data)
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
   -H "x-api-key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json"
 
 # Test email endpoint (abuse potential)
-curl -X POST "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/send-mail" \
+curl -X POST "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/send-mail" \
   -H "x-api-key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -505,7 +505,7 @@ curl -X POST "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/sen
 # Test rate limiting (should throttle after 100 requests/minute)
 for i in {1..150}; do
   curl -w "%{http_code}\n" -o /dev/null -s \
-    -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" \
+    -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow" \
     -H "x-api-key: YOUR_API_KEY_HERE"
 done
 ```
@@ -513,7 +513,7 @@ done
 #### 6.3 Security Header Validation
 ```bash
 # Check security headers
-curl -I "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" \
+curl -I "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow" \
   -H "x-api-key: YOUR_API_KEY_HERE"
 ```
 
@@ -523,7 +523,7 @@ curl -I "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" 
 ```javascript
 // dn-api-client.js
 class DNApiClient {
-    constructor(apiKey, baseUrl = 'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging') {
+    constructor(apiKey, baseUrl = 'https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging') {
         this.apiKey = apiKey;
         this.baseUrl = baseUrl;
     }
@@ -591,7 +591,7 @@ import json
 from typing import Dict, Any, Optional
 
 class DNApiClient:
-    def __init__(self, api_key: str, base_url: str = "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging"):
+    def __init__(self, api_key: str, base_url: str = "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging"):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
@@ -730,7 +730,7 @@ exports.auditApiKeyUsage = async (event) => {
 # Script: rollback-api-security.sh
 
 #!/bin/bash
-API_ID="cjed05n28l"
+API_ID="<API_GATEWAY_ID_2>"
 REGION="us-east-1"
 
 echo "EMERGENCY ROLLBACK: Disabling API key requirements"

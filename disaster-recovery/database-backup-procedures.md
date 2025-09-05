@@ -375,7 +375,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 0 \
   --comparison-operator "LessThanThreshold" \
   --evaluation-periods 2 \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:backup-alerts"
 
 # Monitor backup storage growth
 aws cloudwatch put-metric-alarm \
@@ -388,7 +388,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 2000 \
   --comparison-operator "GreaterThanThreshold" \
   --evaluation-periods 1 \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:backup-alerts"
 ```
 
 ### 3.2 Automated Backup Testing
@@ -401,7 +401,7 @@ aws cloudwatch put-metric-alarm \
 # Automated backup validation and testing
 
 LOG_FILE="/var/log/backup-validation-$(date +%Y%m%d).log"
-NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:867653852961:backup-alerts"
+NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:backup-alerts"
 
 echo "Starting weekly backup validation - $(date)" >> $LOG_FILE
 
@@ -463,7 +463,7 @@ SOURCE_SNAPSHOT="manual-backup-20250725-140000"
 TARGET_REGION="us-west-2"
 
 aws rds copy-db-cluster-snapshot \
-  --source-db-cluster-snapshot-identifier "arn:aws:rds:us-east-1:867653852961:cluster-snapshot:$SOURCE_SNAPSHOT" \
+  --source-db-cluster-snapshot-identifier "arn:aws:rds:us-east-1:<AWS_ACCOUNT_ID>:cluster-snapshot:$SOURCE_SNAPSHOT" \
   --target-db-cluster-snapshot-identifier "$SOURCE_SNAPSHOT-west-2" \
   --source-region us-east-1 \
   --region $TARGET_REGION \
@@ -568,7 +568,7 @@ Emergency Contacts:
 Critical Information:
   Aurora Cluster: database-2
   Region: us-east-1
-  Account: 867653852961
+  Account: <AWS_ACCOUNT_ID>
   Backup Retention: 7 days (expandable to 35 days)
   Point-in-Time Recovery: 5-minute granularity
 ```

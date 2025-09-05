@@ -307,12 +307,12 @@ Outbound Rules:
 ### API Gateway VPC Integration
 ```yaml
 API Gateway Network Configuration:
-  dn-api (cjed05n28l):
+  dn-api (<API_GATEWAY_ID_2>):
     Integration Type: AWS_PROXY (Lambda integration)
     VPC Integration: Not applicable (Lambda proxy)
     Security: Custom API key authentication
     
-  distronationfmGeneralAccess (hmuujzief2):
+  distronationfmGeneralAccess (<API_GATEWAY_ID_1>):
     Integration Type: AWS IAM authentication
     VPC Integration: Private Lambda functions
     Security: IAM signature v4 required

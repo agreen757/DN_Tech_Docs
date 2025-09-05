@@ -445,7 +445,7 @@ TikTok API Monitoring:
 ```yaml
 Primary Notification Topics:
   Engineering-Critical:
-    Topic ARN: arn:aws:sns:us-east-1:867653852961:engineering-critical
+    Topic ARN: arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:engineering-critical
     Subscribers:
       - adrian.green@distronation.com
       - engineering-oncall@distronation.com
@@ -453,7 +453,7 @@ Primary Notification Topics:
     Delivery Policy: Immediate delivery, 3 retry attempts
     
   Engineering-Warning:
-    Topic ARN: arn:aws:sns:us-east-1:867653852961:engineering-warning
+    Topic ARN: arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:engineering-warning
     Subscribers:
       - engineering-team@distronation.com
       - adrian.green@distronation.com
@@ -461,7 +461,7 @@ Primary Notification Topics:
     Delivery Policy: Immediate delivery, 2 retry attempts
     
   Security-Alerts:
-    Topic ARN: arn:aws:sns:us-east-1:867653852961:security-alerts
+    Topic ARN: arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:security-alerts
     Subscribers:
       - security@distronation.com
       - adrian.green@distronation.com
@@ -470,7 +470,7 @@ Primary Notification Topics:
     Delivery Policy: Immediate delivery, 5 retry attempts
     
   Finance-Alerts:
-    Topic ARN: arn:aws:sns:us-east-1:867653852961:finance-alerts
+    Topic ARN: arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:finance-alerts
     Subscribers:
       - finance@distronation.com
       - adrian.green@distronation.com

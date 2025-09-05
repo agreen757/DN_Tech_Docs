@@ -2,7 +2,7 @@
 
 ## API Overview
 - **API Name**: dn-api
-- **Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging`
+- **Base URL**: `https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging`
 - **Version**: 1.0.0
 - **Description**: Distro Nation Functional API for backend admin functions and tasks
 
@@ -19,7 +19,7 @@ info:
     email: adrian@distronation.com
 
 servers:
-  - url: https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging
+  - url: https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging
     description: Production staging environment
 
 security:
@@ -885,13 +885,13 @@ tags:
 
 ### Fetch Users
 ```bash
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list?limit=10&offset=0" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list?limit=10&offset=0" \
   -H "x-api-key: your-api-key-here"
 ```
 
 ### Send Email
 ```bash
-curl -X POST "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/send-mail" \
+curl -X POST "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/send-mail" \
   -H "Content-Type: application/json" \
   -H "x-api-key: your-api-key-here" \
   -d '{
@@ -904,17 +904,17 @@ curl -X POST "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/sen
 
 ### Health Check
 ```bash
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow" \
   -H "x-api-key: your-api-key-here"
 ```
 
 ### Authentication Error Examples
 ```bash
 # Missing API key - Returns 401
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list"
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list"
 
 # Invalid API key - Returns 403  
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
   -H "x-api-key: invalid-key"
 ```
 

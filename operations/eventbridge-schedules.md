@@ -44,7 +44,7 @@ This document catalogs all EventBridge rules configured for automated task execu
 - **Task Definition**: `cmscustomidcleanup-task:2`
 - **Launch Type**: FARGATE
 - **Task Count**: 1
-- **Role ARN**: `arn:aws:iam::867653852961:role/ecsTaskExecutionRole`
+- **Role ARN**: `arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole`
 
 #### channelbackfill Failure Alert
 

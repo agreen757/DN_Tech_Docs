@@ -14,7 +14,7 @@ This document provides comprehensive specifications for all Distro Nation enviro
 ### Environment Distribution
 ```yaml
 Production Environment:
-  AWS Account: 867653852961
+  AWS Account: <AWS_ACCOUNT_ID>
   Primary Region: us-east-1
   Users: Live traffic 
   Availability: 99.9% target SLA
@@ -452,7 +452,7 @@ service firebase.storage {
 #### Production API Configuration
 ```yaml
 dn-api (Production):
-  API ID: cjed05n28l.execute-api.us-east-1.amazonaws.com
+  API ID: <API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
   Stage: staging (note: naming inconsistency)
   Throttling:
     Burst Limit: 5000 requests
@@ -461,7 +461,7 @@ dn-api (Production):
   Caching: Enabled for GET requests (300 second TTL)
   
 distronationfmGeneralAccess (Production):
-  API ID: hmuujzief2.execute-api.us-east-1.amazonaws.com
+  API ID: <API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com
   Stage: main
   Authentication: AWS IAM required
   Throttling:

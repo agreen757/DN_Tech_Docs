@@ -8,7 +8,7 @@ This document provides comprehensive documentation of Amazon CloudWatch metrics,
 ### Current Metrics Summary
 ```yaml
 CloudWatch Metrics Inventory:
-  Account ID: 867653852961
+  Account ID: <AWS_ACCOUNT_ID>
   Region: us-east-1 (primary)
   Monthly Cost: $8.12 (27.068 custom metrics)
   Metric Retention: 15 months (CloudWatch default)
@@ -25,7 +25,7 @@ Metric Categories:
 
 ### API Gateway Metrics
 ```yaml
-dn-api Gateway (cjed05n28l):
+dn-api Gateway (<API_GATEWAY_ID_2>):
   Request Metrics:
     - Count: Total number of API requests
     - IntegrationLatency: Backend service response time
@@ -44,7 +44,7 @@ dn-api Gateway (cjed05n28l):
     - Error Rate: <5% (alert threshold)
     - Cache Hit Rate: >60% (cost optimization target)
 
-distronationfmGeneralAccess Gateway (hmuujzief2):
+distronationfmGeneralAccess Gateway (<API_GATEWAY_ID_1>):
   Request Metrics:
     - Count: DistroFM-specific API request volume
     - IntegrationLatency: Lambda function response times

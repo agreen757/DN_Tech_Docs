@@ -148,7 +148,7 @@ Production Environment:
   Build Settings:
     Node Version: 18
     Environment Variables:
-      - REACT_APP_API_ENDPOINT: https://cjed05n28l.execute-api.us-east-1.amazonaws.com
+      - REACT_APP_API_ENDPOINT: https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
       - REACT_APP_GRAPHQL_ENDPOINT: https://jjxoyzwu4naxzpelrk6ncmoasi.appsync-api.us-east-1.amazonaws.com
       - REACT_APP_FIREBASE_PROJECT: [production-project-id]
       - NODE_ENV: production

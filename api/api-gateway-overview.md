@@ -9,21 +9,21 @@ Distro Nation operates two primary API Gateways that serve different functional 
 ## API Gateway Configuration
 
 ### dn-api (Core Platform API)
-- **API ID**: cjed05n28l
+- **API ID**: <API_GATEWAY_ID_2>
 - **Created**: February 8, 2024
 - **Description**: Distro Nation Functional API. This API is used to launch back-end admin functions and tasks
 - **Endpoint Type**: EDGE (CloudFront distribution)
-- **Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com`
+- **Base URL**: `https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com`
 - **Deployment Stage**: `staging`
 - **API Key Source**: HEADER
 - **Root Resource ID**: bhwsy6typa
 
 ### distronationfmGeneralAccess (DistroFM API)
-- **API ID**: hmuujzief2  
+- **API ID**: <API_GATEWAY_ID_1>  
 - **Created**: June 14, 2024
 - **Version**: 2018-05-24T17:52:00Z
 - **Endpoint Type**: EDGE (CloudFront distribution)
-- **Base URL**: `https://hmuujzief2.execute-api.us-east-1.amazonaws.com`
+- **Base URL**: `https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com`
 - **Deployment Stage**: `main`
 - **API Key Source**: HEADER
 - **Root Resource ID**: vs4lq7ol18

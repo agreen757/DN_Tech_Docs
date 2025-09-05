@@ -79,7 +79,7 @@ SSL Certificate:
   Certificate Domain: *.distronation.com
   Minimum Protocol Version: TLSv1.2
   SSL Support Method: SNI Only
-  Certificate ARN: arn:aws:acm:us-east-1:867653852961:certificate/xxxxxxxx
+  Certificate ARN: arn:aws:acm:us-east-1:<AWS_ACCOUNT_ID>:certificate/xxxxxxxx
 ```
 
 ### API Content Distribution (E1FZO978Z8RTXO)
@@ -93,7 +93,7 @@ Distribution Configuration:
   
 Origins:
   API Gateway Origin:
-    Domain Name: cjed05n28l.execute-api.us-east-1.amazonaws.com
+    Domain Name: <API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
     Origin ID: APIGateway-Origin-1
     Protocol Policy: HTTPS Only
     Origin Path: /staging
@@ -214,7 +214,7 @@ Distribution Configuration:
   
 Origins:
   DistroFM API Origin:
-    Domain Name: hmuujzief2.execute-api.us-east-1.amazonaws.com
+    Domain Name: <API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com
     Origin ID: DistroFM-API-Origin
     Protocol Policy: HTTPS Only
     Origin Path: /main

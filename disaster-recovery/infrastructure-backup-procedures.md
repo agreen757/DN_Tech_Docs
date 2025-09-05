@@ -1332,7 +1332,7 @@ echo "✓ Manual recovery checklist created: ./manual-recovery-checklist-$BACKUP
 # Send notification
 if command -v aws &> /dev/null; then
   aws sns publish \
-    --topic-arn "arn:aws:sns:us-east-1:867653852961:infrastructure-recovery-alerts" \
+    --topic-arn "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:infrastructure-recovery-alerts" \
     --message "Infrastructure recovery $RECOVERY_TYPE completed for backup $BACKUP_DATE. Check recovery log: $RECOVERY_LOG" \
     --subject "Infrastructure Recovery Completed" 2>/dev/null || echo "Failed to send notification"
 fi

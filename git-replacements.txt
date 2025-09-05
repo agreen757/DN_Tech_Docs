@@ -1,0 +1,3 @@
+literal:867653852961==><AWS_ACCOUNT_ID>
+literal:cjed05n28l==><API_GATEWAY_ID_2>
+literal:hmuujzief2==><API_GATEWAY_ID_1>

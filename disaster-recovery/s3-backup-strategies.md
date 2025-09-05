@@ -163,7 +163,7 @@ for bucket in "${CRITICAL_BUCKETS[@]}"; do
     aws s3api put-bucket-versioning \
       --bucket "$bucket" \
       --versioning-configuration Status=Enabled,MFADelete=Enabled \
-      --mfa "arn:aws:iam::867653852961:mfa/your-mfa-device 123456"
+      --mfa "arn:aws:iam::<AWS_ACCOUNT_ID>:mfa/<MFA_DEVICE_NAME> 123456"
   fi
 
   echo "Versioning enabled for $bucket"
@@ -253,7 +253,7 @@ aws iam attach-role-policy \
 
 SOURCE_REGION="us-east-1"
 DEST_REGION="us-west-2"
-ROLE_ARN="arn:aws:iam::867653852961:role/S3-CrossRegion-Replication-Role"
+ROLE_ARN="arn:aws:iam::<AWS_ACCOUNT_ID>:role/S3-CrossRegion-Replication-Role"
 
 setup_replication() {
   local source_bucket=$1
@@ -327,7 +327,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 1 \
   --comparison-operator "GreaterThanOrEqualToThreshold" \
   --evaluation-periods 1 \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:s3-backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:s3-backup-alerts"
 
 # Monitor replication lag
 aws cloudwatch put-metric-alarm \
@@ -340,7 +340,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 900 \
   --comparison-operator "GreaterThanThreshold" \
   --evaluation-periods 2 \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:s3-backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:s3-backup-alerts"
 ```
 
 ## 4. Backup and Recovery Procedures
@@ -650,7 +650,7 @@ if __name__ == "__main__":
 # Validate S3 backup and recovery capabilities
 
 LOG_FILE="/var/log/s3-backup-validation-$(date +%Y%m%d).log"
-NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:867653852961:s3-backup-alerts"
+NOTIFICATION_TOPIC="arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:s3-backup-alerts"
 
 echo "Starting S3 backup validation - $(date)" >> $LOG_FILE
 
@@ -960,7 +960,7 @@ aws cloudwatch put-metric-alarm \
   --comparison-operator "GreaterThanThreshold" \
   --evaluation-periods 1 \
   --dimensions Name=BucketName,Value=distronation-audio Name=StorageType,Value=StandardStorage \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:s3-backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:s3-backup-alerts"
 
 # Monitor replication failures
 aws cloudwatch put-metric-alarm \
@@ -973,7 +973,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 1 \
   --comparison-operator "GreaterThanOrEqualToThreshold" \
   --evaluation-periods 1 \
-  --alarm-actions "arn:aws:sns:us-east-1:867653852961:s3-backup-alerts"
+  --alarm-actions "arn:aws:sns:us-east-1:<AWS_ACCOUNT_ID>:s3-backup-alerts"
 ```
 
 ### 7.2 Custom Metrics and Dashboards

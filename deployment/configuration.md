@@ -242,7 +242,7 @@ Security Certificates:
       "Effect": "Allow",
       "Action": ["secretsmanager:GetSecretValue"],
       "Resource": [
-        "arn:aws:secretsmanager:us-east-1:867653852961:secret:prod/distronation/*"
+        "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:<SECRETS_PATH>/*"
       ],
       "Condition": {
         "StringEquals": {
@@ -347,7 +347,7 @@ StringList Parameters:
 ```yaml
 API Configuration:
   /distronation/prod/api/gateway-endpoint:
-    Value: https://cjed05n28l.execute-api.us-east-1.amazonaws.com
+    Value: https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
     Type: String
     Description: Primary API Gateway endpoint
 

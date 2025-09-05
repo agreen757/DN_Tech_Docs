@@ -58,14 +58,14 @@ System Administrator
         "rds-data:ExecuteStatement",
         "rds-data:RollbackTransaction"
       ],
-      "Resource": "arn:aws:rds:us-east-1:867653852961:cluster:database-2-cluster"
+      "Resource": "arn:aws:rds:us-east-1:<AWS_ACCOUNT_ID>:cluster:<DATABASE_CLUSTER_NAME>"
     },
     {
       "Effect": "Allow",
       "Action": [
         "secretsmanager:GetSecretValue"
       ],
-      "Resource": "arn:aws:secretsmanager:us-east-1:867653852961:secret:prod/distronation/*"
+      "Resource": "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:<SECRETS_PATH>/*"
     }
   ]
 }
@@ -74,7 +74,7 @@ System Administrator
 #### API Gateway IAM Authentication
 - **Service**: distronationfmGeneralAccess
 - **Authentication**: AWS Signature Version 4
-- **Resource ARN**: `arn:aws:execute-api:us-east-1:867653852961:hmuujzief2/main/*/*`
+- **Resource ARN**: `arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:<API_GATEWAY_ID_1>/main/*/*`
 - **Required Permissions**: `execute-api:Invoke`
 
 ### Human User Access
@@ -435,7 +435,7 @@ For critical system failures requiring immediate access:
         "logs:CreateLogStream", 
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:us-east-1:867653852961:*"
+      "Resource": "arn:aws:logs:us-east-1:<AWS_ACCOUNT_ID>:*"
     }
   ]
 }
@@ -449,7 +449,7 @@ For critical system failures requiring immediate access:
     {
       "Effect": "Allow",
       "Action": "execute-api:Invoke",
-      "Resource": "arn:aws:execute-api:us-east-1:867653852961:*/main/*/*",
+      "Resource": "arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:*/main/*/*",
       "Condition": {
         "StringEquals": {
           "aws:userid": "${aws:userid}"

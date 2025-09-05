@@ -6,14 +6,14 @@ This guide provides comprehensive instructions for integrating with the Distro N
 ## API Endpoints Summary
 
 ### dn-api (Administrative API)
-- **Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging`
+- **Base URL**: `https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging`
 - **Authentication**: None (currently open)
 - **Rate Limiting**: None (currently)
 - **CORS**: Enabled with wildcard origin
 - **Primary Use**: Backend administrative operations
 
 ### distronationfmGeneralAccess (DistroFM API)
-- **Base URL**: `https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main`
+- **Base URL**: `https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main`
 - **Authentication**: AWS IAM (Signature V4)
 - **Rate Limiting**: 5,000 burst, 10,000/second
 - **CORS**: Enabled with preflight support
@@ -27,7 +27,7 @@ This guide provides comprehensive instructions for integrating with the Distro N
 ```javascript
 class DistroNationAPI {
   constructor() {
-    this.baseURL = 'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging';
+    this.baseURL = 'https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging';
   }
   
   async makeRequest(endpoint, method = 'GET', body = null) {
@@ -107,7 +107,7 @@ from typing import Optional, Dict, Any
 
 class DistroNationAPI:
     def __init__(self):
-        self.base_url = 'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging'
+        self.base_url = 'https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging'
         self.session = requests.Session()
     
     def make_request(self, endpoint: str, method: str = 'GET', data: Optional[Dict] = None) -> Dict[str, Any]:
@@ -169,7 +169,7 @@ const AWS = require('aws-sdk');
 
 class DistroFMAPI {
   constructor(credentials) {
-    this.baseURL = 'https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main';
+    this.baseURL = 'https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main';
     this.region = 'us-east-1';
     
     // Configure AWS credentials
@@ -290,7 +290,7 @@ from urllib.parse import urlencode
 
 class DistroFMAPI:
     def __init__(self, aws_access_key_id, aws_secret_access_key, region='us-east-1'):
-        self.base_url = 'https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main'
+        self.base_url = 'https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main'
         self.region = region
         
         # Create AWS session
@@ -817,7 +817,7 @@ describe('DistroNationAPI', () => {
       const result = await api.getUsers(10, 0);
       
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list?limit=10&offset=0',
+        'https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list?limit=10&offset=0',
         expect.objectContaining({
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
@@ -847,7 +847,7 @@ describe('DistroNationAPI', () => {
       const result = await api.sendEmail(emailData);
       
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/send-mail',
+        'https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/send-mail',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(emailData)

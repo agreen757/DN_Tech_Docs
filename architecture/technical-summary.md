@@ -6,7 +6,7 @@ Distro Nation operates a sophisticated hybrid cloud architecture combining AWS a
 ## Infrastructure Scope
 
 ### AWS Account Details
-- **Account ID**: 867653852961
+- **Account ID**: <AWS_ACCOUNT_ID>
 - **Primary Region**: us-east-1 (N. Virginia)
 - **Architecture**: Serverless-first with extensive Lambda usage
 - **Database**: Aurora PostgreSQL Serverless

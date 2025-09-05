@@ -2,7 +2,7 @@
 
 ## API Overview
 - **API Name**: distronationfmGeneralAccess
-- **Base URL**: `https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main`
+- **Base URL**: `https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main`
 - **Version**: 2018-05-24T17:52:00Z
 - **Description**: DistroFM application-specific API for content operations and media management
 - **Authentication**: AWS IAM (Signature Version 4)
@@ -20,7 +20,7 @@ info:
     email: adrian@distronation.com
 
 servers:
-  - url: https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main
+  - url: https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main
     description: Production main environment
 
 security:
@@ -1051,7 +1051,7 @@ Endpoints with `{proxy+}` accept additional path parameters for flexible routing
 ### Get Artist Information (with AWS CLI)
 ```bash
 aws apigatewayv2 invoke \
-  --api-id hmuujzief2 \
+  --api-id <API_GATEWAY_ID_1> \
   --stage main \
   --route-key "GET /artist-info/12345" \
   response.json
@@ -1059,7 +1059,7 @@ aws apigatewayv2 invoke \
 
 ### Submit Video (with signature)
 ```bash
-curl -X POST "https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main/submit-video" \
+curl -X POST "https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main/submit-video" \
   -H "Authorization: AWS4-HMAC-SHA256 ..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -1073,7 +1073,7 @@ curl -X POST "https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main/submit
 
 ### Parse Content
 ```bash
-curl -X GET "https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main/parse/content123?format=json&includeMetadata=true" \
+curl -X GET "https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main/parse/content123?format=json&includeMetadata=true" \
   -H "Authorization: AWS4-HMAC-SHA256 ..."
 ```
 

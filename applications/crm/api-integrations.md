@@ -18,7 +18,7 @@ The Distro Nation CRM integrates with multiple APIs to provide comprehensive fun
 ## AWS API Gateway Integration
 
 ### dn-api Core Integration
-**Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging`  
+**Base URL**: `https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging`  
 **Authentication**: API Key via `x-api-key` header  
 **Configuration Location**: `src/config/api.config.ts`
 

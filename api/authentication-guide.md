@@ -23,7 +23,7 @@ Distro Nation implements multiple authentication patterns across its API infrast
 
 ### Example Request
 ```bash
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
   -H "Content-Type: application/json" \
   -H "x-api-key: your-api-key-here"
 ```
@@ -146,7 +146,7 @@ AWS.config.update({
 
 // Create signed request
 const apiCall = async (path, method = 'GET', body = null) => {
-  const endpoint = new AWS.Endpoint('hmuujzief2.execute-api.us-east-1.amazonaws.com');
+  const endpoint = new AWS.Endpoint('<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com');
   const request = new AWS.HttpRequest(endpoint, 'us-east-1');
   
   request.method = method;
@@ -189,7 +189,7 @@ def make_signed_request(path, method='GET', data=None):
     credentials = session.get_credentials()
     
     # Create request
-    url = f'https://hmuujzief2.execute-api.us-east-1.amazonaws.com/main{path}'
+    url = f'https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com/main{path}'
     request = AWSRequest(method=method, url=url, data=data)
     
     # Sign request
@@ -213,7 +213,7 @@ artist_info = make_signed_request('/artist-info/12345')
 ```bash
 # Using AWS CLI to generate signed request
 aws apigatewayv2 invoke \
-  --api-id hmuujzief2 \
+  --api-id <API_GATEWAY_ID_1> \
   --stage main \
   --route-key "GET /artist-info/12345" \
   --region us-east-1 \
@@ -233,7 +233,7 @@ cat response.json
         "execute-api:Invoke"
       ],
       "Resource": [
-        "arn:aws:execute-api:us-east-1:867653852961:hmuujzief2/main/*/*"
+        "arn:aws:execute-api:us-east-1:<AWS_ACCOUNT_ID>:<API_GATEWAY_ID_1>/main/*/*"
       ]
     }
   ]
@@ -378,7 +378,7 @@ Each Lambda function has an IAM execution role that defines its permissions:
         "rds-data:ExecuteStatement",
         "rds-data:RollbackTransaction"
       ],
-      "Resource": "arn:aws:rds:us-east-1:867653852961:cluster:database-2-cluster"
+      "Resource": "arn:aws:rds:us-east-1:<AWS_ACCOUNT_ID>:cluster:<DATABASE_CLUSTER_NAME>"
     },
     {
       "Effect": "Allow",
@@ -386,7 +386,7 @@ Each Lambda function has an IAM execution role that defines its permissions:
         "secretsmanager:GetSecretValue"
       ],
       "Resource": [
-        "arn:aws:secretsmanager:us-east-1:867653852961:secret:prod/distronation/*"
+        "arn:aws:secretsmanager:us-east-1:<AWS_ACCOUNT_ID>:secret:<SECRETS_PATH>/*"
       ]
     }
   ]

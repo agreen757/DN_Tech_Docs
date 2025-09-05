@@ -28,8 +28,8 @@ Internal Service Flow:
 ### dn-api Gateway Connectivity
 ```yaml
 Gateway Configuration:
-  API ID: cjed05n28l
-  Endpoint: https://cjed05n28l.execute-api.us-east-1.amazonaws.com
+  API ID: <API_GATEWAY_ID_2>
+  Endpoint: https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com
   Stage: staging
   
 Inbound Connections:
@@ -58,8 +58,8 @@ Connection Patterns:
 ### distronationfmGeneralAccess Gateway Connectivity
 ```yaml
 Gateway Configuration:
-  API ID: hmuujzief2
-  Endpoint: https://hmuujzief2.execute-api.us-east-1.amazonaws.com
+  API ID: <API_GATEWAY_ID_1>
+  Endpoint: https://<API_GATEWAY_ID_1>.execute-api.us-east-1.amazonaws.com
   Stage: main
   
 Inbound Connections:

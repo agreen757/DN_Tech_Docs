@@ -167,7 +167,7 @@ aws apigateway create-usage-plan \
     --name "dn-api-development-plan" \
     --description "Development tier with 100 req/min" \
     --throttle "rateLimit=100,burstLimit=200" \
-    --api-stages "apiId=cjed05n28l,stage=staging" \
+    --api-stages "apiId=<API_GATEWAY_ID_2>,stage=staging" \
     --region us-east-1
 
 # Production Plan  
@@ -175,7 +175,7 @@ aws apigateway create-usage-plan \
     --name "dn-api-production-plan" \
     --description "Production tier with 1000 req/min" \
     --throttle "rateLimit=1000,burstLimit=2000" \
-    --api-stages "apiId=cjed05n28l,stage=staging" \
+    --api-stages "apiId=<API_GATEWAY_ID_2>,stage=staging" \
     --region us-east-1
 
 # Enterprise Plan
@@ -183,7 +183,7 @@ aws apigateway create-usage-plan \
     --name "dn-api-enterprise-plan" \
     --description "Enterprise tier with 10000 req/min" \
     --throttle "rateLimit=10000,burstLimit=20000" \
-    --api-stages "apiId=cjed05n28l,stage=staging" \
+    --api-stages "apiId=<API_GATEWAY_ID_2>,stage=staging" \
     --region us-east-1
 ```
 
@@ -235,7 +235,7 @@ zip lambda-authorizer-apikey.zip index.js
 aws lambda create-function \
     --function-name lambda-authorizer-apikey \
     --runtime nodejs18.x \
-    --role arn:aws:iam::867653852961:role/lambda-authorizer-role \
+    --role arn:aws:iam::<AWS_ACCOUNT_ID>:role/lambda-authorizer-role \
     --handler index.handler \
     --zip-file fileb://lambda-authorizer-apikey.zip \
     --timeout 30 \
@@ -247,10 +247,10 @@ aws lambda create-function \
 ```bash
 # Create custom authorizer
 aws apigateway create-authorizer \
-    --rest-api-id cjed05n28l \
+    --rest-api-id <API_GATEWAY_ID_2> \
     --name "api-key-authorizer" \
     --type TOKEN \
-    --authorizer-uri "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:867653852961:function:lambda-authorizer-apikey/invocations" \
+    --authorizer-uri "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:<AWS_ACCOUNT_ID>:function:lambda-authorizer-apikey/invocations" \
     --identity-source "method.request.header.x-api-key" \
     --region us-east-1
 
@@ -263,7 +263,7 @@ aws apigateway create-authorizer \
 ### Successful Authentication Test
 ```bash
 # Test with valid API key
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
   -H "x-api-key: [VALID_API_KEY]" \
   -H "Content-Type: application/json"
 
@@ -273,11 +273,11 @@ curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_u
 ### Failed Authentication Tests
 ```bash
 # Test without API key
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list"
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list"
 # Expected: HTTP 401 Unauthorized
 
 # Test with invalid API key
-curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
+curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/dn_users_list" \
   -H "x-api-key: invalid-key-12345"
 # Expected: HTTP 403 Forbidden
 ```
@@ -286,7 +286,7 @@ curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_u
 ```bash
 # Test rate limiting (requires multiple rapid requests)
 for i in {1..150}; do
-  curl -X GET "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/hollow" \
+  curl -X GET "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging/hollow" \
     -H "x-api-key: [DEVELOPMENT_KEY]" &
 done
 

@@ -357,7 +357,7 @@ All CRM interactions with AWS API Gateway require API key authentication.
 // src/config/api.config.ts
 export const dnApiConfig = {
   apiKey: process.env.REACT_APP_DN_API_KEY || "your-dn-api-key-here",
-  baseUrl: "https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging",
+  baseUrl: "https://<API_GATEWAY_ID_2>.execute-api.us-east-1.amazonaws.com/staging",
 };
 
 // API key validation on application startup
