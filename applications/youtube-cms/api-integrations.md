@@ -10,28 +10,106 @@ The YouTube CMS Metadata Management Tool integrates with multiple external servi
 
 #### Authentication & Authorization
 
-**OAuth 2.0 Implementation**
+**SSM Parameter Store Integration**
 ```python
-# Token management configuration
+from aws_sdk import SSMClient, GetParameterCommand
+from shared.keyManager import KeyManager
+
+# Secure credential management with SSM Parameter Store
+class YouTubeAPIClient:
+    def __init__(self):
+        self.ssm_client = SSMClient(region='<REGION>')
+        self.key_manager = KeyManager(
+            api_id=os.environ.get('API_ID'),
+            appSyncClient=AppSyncClient(region='<REGION>'),
+            ssmClient=self.ssm_client
+        )
+        self.base_url = 'https://www.googleapis.com/youtube/v3'
+        
+    async def get_youtube_api_key(self):
+        """Retrieve YouTube API key from SSM Parameter Store"""
+        try:
+            return await self.key_manager.getApiKeyFromSSM('/distro-nation/youtube/api-key')
+        except Exception as e:
+            logger.error(f"Failed to retrieve YouTube API key from SSM: {e}")
+            # Fallback to environment variable
+            return os.environ.get('YOUTUBE_API_KEY')
+```
+
+**Legacy OAuth 2.0 Implementation (Deprecated)**
+```python
+# Legacy environment variable approach - being migrated to SSM
 YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY')
 YOUTUBE_CLIENT_ID = os.environ.get('YOUTUBE_CLIENT_ID')
 YOUTUBE_CLIENT_SECRET = os.environ.get('YOUTUBE_CLIENT_SECRET')
-
-class YouTubeAPIClient:
-    def __init__(self):
-        self.api_key = YOUTUBE_API_KEY
-        self.client_id = YOUTUBE_CLIENT_ID
-        self.client_secret = YOUTUBE_CLIENT_SECRET
-        self.base_url = 'https://www.googleapis.com/youtube/v3'
 ```
 
-**Token Management**
+**Advanced Token Management with SSM Integration**
+```python
+from shared.classes import APIToken, GraphQL, Logger
+
+class AdvancedTokenManager:
+    def __init__(self):
+        self.api_token = APIToken()
+        self.graphql = GraphQL()
+        self.logger = Logger({
+            'service': 'TokenManager',
+            'correlationId': f'token-mgr-{Date.now()}',
+            'maskFields': ['apiKey', 'token', 'authorization', 'password', 'secret']
+        })
+    
+    async def get_youtube_access_token(self):
+        """Retrieve YouTube Content ID API access token with SSM integration"""
+        try:
+            self.logger.info('GET_YOUTUBE_TOKEN_ATTEMPT')
+            
+            # Get token from secure API endpoint using SSM-stored API key
+            token = await self.api_token.getToken()
+            
+            self.logger.audit('YOUTUBE_TOKEN_RETRIEVED', {
+                'resourceType': 'ACCESS_TOKEN',
+                'action': 'RETRIEVE',
+                'outcome': 'SUCCESS'
+            })
+            
+            return token
+        except Exception as e:
+            self.logger.error('GET_YOUTUBE_TOKEN_ERROR', {}, e)
+            
+            self.logger.audit('YOUTUBE_TOKEN_RETRIEVAL_FAILED', {
+                'resourceType': 'ACCESS_TOKEN',
+                'action': 'RETRIEVE',
+                'outcome': 'FAILURE',
+                'errorMessage': str(e)
+            })
+            raise
+    
+    async def get_graphql_api_key(self):
+        """Get or create AppSync GraphQL API key with automatic rotation"""
+        try:
+            self.logger.info('GET_GRAPHQL_API_KEY_ATTEMPT')
+            
+            # Initialize API key with automatic creation/rotation
+            api_key = await self.graphql.initializeApiKey()
+            
+            if api_key:
+                self.logger.info('GRAPHQL_API_KEY_SUCCESS')
+                return api_key
+            else:
+                raise Exception("Failed to initialize GraphQL API key")
+                
+        except Exception as e:
+            self.logger.error('GET_GRAPHQL_API_KEY_ERROR', {}, e)
+            raise
+```
+
+**Legacy Token Management (Deprecated)**
 ```python
 from token_fetcher import TokenFetcher, TokenFetchError
 
-class TokenManager:
+class LegacyTokenManager:
     def get_access_token(self):
-        """Retrieve valid access token with automatic refresh"""
+        """Legacy token retrieval - being replaced by SSM integration"""
         try:
             token = self.token_fetcher.get_youtube_token()
             if self.is_token_expired(token):
@@ -40,18 +118,6 @@ class TokenManager:
         except TokenFetchError as e:
             logger.error(f"Token fetch failed: {e}")
             raise
-    
-    def refresh_token(self, expired_token):
-        """Refresh expired access token"""
-        refresh_url = 'https://oauth2.googleapis.com/token'
-        payload = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'refresh_token': expired_token['refresh_token'],
-            'grant_type': 'refresh_token'
-        }
-        response = requests.post(refresh_url, data=payload)
-        return response.json()
 ```
 
 #### Video Metadata Operations
@@ -247,7 +313,174 @@ def get_channel_details(channel_id):
 }
 ```
 
-### 2. AWS S3 Integration
+### 2. AWS Systems Manager (SSM) Parameter Store Integration
+
+#### Secure Credential Management
+
+**SSM Parameter Store Configuration**
+```python
+from aws_sdk import SSMClient, GetParameterCommand, PutParameterCommand
+from shared.keyManager import KeyManager
+
+class SSMParameterManager:
+    def __init__(self):
+        self.ssm_client = SSMClient(region='<REGION>')
+        self.api_key_parameter_name = "/distro-nation/appsync/api-key"
+        self.youtube_api_parameter_name = "/distro-nation/token-api/api-key"
+        
+    async def get_secure_parameter(self, parameter_name):
+        """Retrieve encrypted parameter from SSM Parameter Store"""
+        try:
+            command = GetParameterCommand({
+                'Name': parameter_name,
+                'WithDecryption': True
+            })
+            
+            response = await self.ssm_client.send(command)
+            
+            if response.Parameter and response.Parameter.Value:
+                return response.Parameter.Value
+            else:
+                raise Exception(f"Parameter {parameter_name} has no value")
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve SSM parameter {parameter_name}: {e}")
+            raise
+    
+    async def store_secure_parameter(self, parameter_name, value):
+        """Store encrypted parameter in SSM Parameter Store"""
+        try:
+            command = PutParameterCommand({
+                'Name': parameter_name,
+                'Value': value,
+                'Type': 'SecureString',
+                'Overwrite': True
+            })
+            
+            await self.ssm_client.send(command)
+            logger.info(f"Successfully stored parameter {parameter_name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to store SSM parameter {parameter_name}: {e}")
+            raise
+```
+
+#### API Key Lifecycle Management
+
+**Automatic Key Creation and Rotation**
+```python
+class APIKeyLifecycleManager:
+    def __init__(self):
+        self.key_manager = KeyManager(
+            api_id=os.environ.get('API_ID'),
+            appSyncClient=AppSyncClient(region='<REGION>'),
+            ssmClient=SSMClient(region='<REGION>')
+        )
+        
+    async def initialize_api_key(self, existing_key=None):
+        """Initialize API key with automatic creation and rotation"""
+        try:
+            # Step 1: Try to get key from SSM Parameter Store
+            api_key = await self.key_manager.getApiKeyFromSSM(
+                '/distro-nation/appsync/api-key'
+            )
+            
+            # Step 2: Validate existing key
+            if api_key:
+                is_valid = await self.key_manager.validateApiKey(api_key)
+                if is_valid:
+                    return api_key
+                    
+            # Step 3: Create new key if none exists or current is invalid
+            new_key_id = await self.key_manager.createApiKey(
+                'Auto-generated by Lambda function'
+            )
+            
+            # Step 4: Store new key in SSM
+            if new_key_id:
+                await self.key_manager.storeApiKeyInSSM(
+                    '/distro-nation/appsync/api-key',
+                    new_key_id
+                )
+                return new_key_id
+                
+        except Exception as e:
+            logger.error(f"API key initialization failed: {e}")
+            
+            # Fallback to environment variable
+            fallback_key = os.environ.get('API_DNBACKENDFUNCTIONS_GRAPHQLAPIKEYOUTPUT')
+            if fallback_key:
+                logger.info('Using environment variable fallback')
+                return fallback_key
+            
+            raise Exception("Failed to initialize API key through all available methods")
+    
+    async def rotate_expired_keys(self):
+        """Automatically rotate keys that are expiring within 30 days"""
+        try:
+            # List all API keys
+            api_keys = await self.key_manager.listApiKeys()
+            
+            thirty_days = 30 * 24 * 60 * 60
+            now = int(time.time())
+            
+            for key_id in api_keys:
+                # Check if key expires within 30 days
+                key_details = await self.get_key_details(key_id)
+                
+                if key_details['expires'] - now < thirty_days:
+                    logger.info(f"Rotating key {key_id} expiring soon")
+                    
+                    new_key = await self.key_manager.rotateApiKey(
+                        key_id, 
+                        f"Rotated key replacing {key_id}"
+                    )
+                    
+                    if new_key:
+                        await self.key_manager.storeApiKeyInSSM(
+                            '/distro-nation/appsync/api-key',
+                            new_key
+                        )
+                        
+        except Exception as e:
+            logger.error(f"Key rotation failed: {e}")
+            raise
+```
+
+#### Security and Compliance
+
+**Comprehensive Audit Logging**
+```python
+class SecurityAuditLogger:
+    def __init__(self):
+        self.logger = Logger({
+            'service': 'SSMParameterManager',
+            'maskFields': ['apiKey', 'token', 'authorization', 'password', 'secret']
+        })
+    
+    def audit_parameter_access(self, operation, parameter_name, outcome, actor=None):
+        """Log all SSM parameter operations for compliance"""
+        self.logger.audit(f'SSM_PARAMETER_{operation.upper()}', {
+            'parameterName': parameter_name,
+            'resourceType': 'SSM_PARAMETER',
+            'action': operation.upper(),
+            'outcome': outcome,
+            'actor': actor or 'system',
+            'storageType': 'SSM_PARAMETER_STORE'
+        })
+    
+    def audit_key_lifecycle_event(self, event_type, key_id, outcome, details=None):
+        """Log API key lifecycle events"""
+        self.logger.audit(f'API_KEY_{event_type.upper()}', {
+            'apiKeyId': key_id,
+            'resourceType': 'API_KEY',
+            'action': event_type.upper(),
+            'outcome': outcome,
+            'details': details or {}
+        })
+```
+
+### 3. AWS S3 Integration
 
 #### Configuration & Authentication
 
@@ -648,30 +881,182 @@ def log_database_operation(func):
 
 ## Security Considerations
 
-### API Security
+### Enhanced API Security with SSM Parameter Store
 
-**Secure Credential Management**
+**SSM-Based Secure Credential Management**
 ```python
-class SecureCredentialManager:
+class EnhancedSecureCredentialManager:
+    def __init__(self):
+        self.ssm_client = SSMClient(region='<REGION>')
+        self.app_sync_client = AppSyncClient(region='<REGION>')
+        self.logger = Logger({
+            'service': 'SecureCredentialManager',
+            'maskFields': ['apiKey', 'token', 'authorization', 'password', 'secret']
+        })
+    
+    async def get_encrypted_credential(self, parameter_name):
+        """Retrieve encrypted credential from SSM Parameter Store"""
+        try:
+            self.logger.audit('CREDENTIAL_RETRIEVAL_INITIATED', {
+                'parameterName': parameter_name,
+                'resourceType': 'CREDENTIAL',
+                'action': 'RETRIEVE',
+                'storageType': 'SSM_PARAMETER_STORE'
+            })
+            
+            command = GetParameterCommand({
+                'Name': parameter_name,
+                'WithDecryption': True  # SSM handles decryption with KMS
+            })
+            
+            response = await self.ssm_client.send(command)
+            
+            if response.Parameter and response.Parameter.Value:
+                self.logger.audit('CREDENTIAL_RETRIEVED', {
+                    'parameterName': parameter_name,
+                    'resourceType': 'CREDENTIAL',
+                    'action': 'RETRIEVE',
+                    'outcome': 'SUCCESS',
+                    'storageType': 'SSM_PARAMETER_STORE'
+                })
+                
+                return response.Parameter.Value
+            else:
+                raise Exception("Parameter value is empty")
+                
+        except Exception as e:
+            self.logger.audit('CREDENTIAL_RETRIEVAL_FAILED', {
+                'parameterName': parameter_name,
+                'resourceType': 'CREDENTIAL',
+                'action': 'RETRIEVE',
+                'outcome': 'FAILURE',
+                'errorMessage': str(e),
+                'storageType': 'SSM_PARAMETER_STORE'
+            })
+            raise
+    
+    async def store_encrypted_credential(self, parameter_name, credential_value):
+        """Store encrypted credential in SSM Parameter Store"""
+        try:
+            # Validate parameter name format
+            if not re.match(r'^[a-zA-Z0-9_.\-/]+$', parameter_name):
+                raise ValueError("Invalid parameter name format")
+            
+            if len(parameter_name) > 1024:
+                raise ValueError("Parameter name too long")
+            
+            if len(credential_value) > 4096:
+                raise ValueError("Credential value too long")
+            
+            self.logger.audit('CREDENTIAL_STORAGE_INITIATED', {
+                'parameterName': parameter_name,
+                'resourceType': 'CREDENTIAL',
+                'action': 'STORE',
+                'storageType': 'SSM_PARAMETER_STORE'
+            })
+            
+            command = PutParameterCommand({
+                'Name': parameter_name,
+                'Value': credential_value,
+                'Type': 'SecureString',  # Encrypted with KMS
+                'Overwrite': True
+            })
+            
+            await self.ssm_client.send(command)
+            
+            self.logger.audit('CREDENTIAL_STORED', {
+                'parameterName': parameter_name,
+                'resourceType': 'CREDENTIAL',
+                'action': 'STORE',
+                'outcome': 'SUCCESS',
+                'storageType': 'SSM_PARAMETER_STORE'
+            })
+            
+        except Exception as e:
+            self.logger.audit('CREDENTIAL_STORAGE_FAILED', {
+                'parameterName': parameter_name,
+                'resourceType': 'CREDENTIAL',
+                'action': 'STORE',
+                'outcome': 'FAILURE',
+                'errorMessage': str(e),
+                'storageType': 'SSM_PARAMETER_STORE'
+            })
+            raise
+    
+    async def rotate_api_keys_automatically(self):
+        """Advanced API key rotation with lifecycle management"""
+        try:
+            # List all AppSync API keys
+            list_command = ListApiKeysCommand({
+                'apiId': os.environ.get('API_ID')
+            })
+            
+            response = await self.app_sync_client.send(list_command)
+            
+            if not response.apiKeys:
+                # No keys exist, create one
+                await self.create_new_api_key('Initial API Key')
+                return
+            
+            now = int(time.time())
+            thirty_days = 30 * 24 * 60 * 60
+            
+            for key in response.apiKeys:
+                if key.expires and (key.expires - now) < thirty_days:
+                    # Key expiring soon, rotate it
+                    await self.rotate_specific_key(key.id, key.description)
+                    
+        except Exception as e:
+            self.logger.error('AUTOMATIC_KEY_ROTATION_ERROR', {}, e)
+            raise
+    
+    async def create_new_api_key(self, description):
+        """Create new AppSync API key with secure storage"""
+        try:
+            # Create key with 365-day expiration
+            expires = int(time.time()) + (365 * 24 * 60 * 60)
+            
+            create_command = CreateApiKeyCommand({
+                'apiId': os.environ.get('API_ID'),
+                'description': description,
+                'expires': expires
+            })
+            
+            response = await self.app_sync_client.send(create_command)
+            
+            if response.apiKey and response.apiKey.id:
+                # Store the new key in SSM
+                await self.store_encrypted_credential(
+                    '/distro-nation/appsync/api-key',
+                    response.apiKey.id
+                )
+                
+                self.logger.audit('API_KEY_CREATED_AND_STORED', {
+                    'apiKeyId': response.apiKey.id,
+                    'resourceType': 'API_KEY',
+                    'action': 'CREATE',
+                    'outcome': 'SUCCESS',
+                    'expiresAt': datetime.fromtimestamp(expires).isoformat()
+                })
+                
+                return response.apiKey.id
+                
+        except Exception as e:
+            self.logger.error('NEW_API_KEY_CREATION_ERROR', {}, e)
+            raise
+```
+
+**Legacy Secure Credential Management (Deprecated)**
+```python
+class LegacySecureCredentialManager:
     def __init__(self):
         self.encryption_key = os.environ.get('ENCRYPTION_KEY')
     
     def encrypt_credentials(self, credentials):
-        """Encrypt sensitive credentials"""
+        """Encrypt sensitive credentials - replaced by SSM Parameter Store"""
         from cryptography.fernet import Fernet
         f = Fernet(self.encryption_key)
         return f.encrypt(credentials.encode())
-    
-    def decrypt_credentials(self, encrypted_credentials):
-        """Decrypt stored credentials"""
-        from cryptography.fernet import Fernet
-        f = Fernet(self.encryption_key)
-        return f.decrypt(encrypted_credentials).decode()
-    
-    def rotate_api_keys(self):
-        """Rotate API keys for enhanced security"""
-        # Implementation for key rotation
-        pass
 ```
 
 **Request Validation**
@@ -699,4 +1084,109 @@ def validate_api_request(schema_class):
     return decorator
 ```
 
-This comprehensive API integration documentation provides complete coverage of all external service interactions, enabling secure, efficient, and reliable operations within the YouTube CMS Metadata Management Tool ecosystem.
+## SSM Parameter Store Security Best Practices
+
+### Parameter Naming Conventions
+- **Use hierarchical naming**: `/distro-nation/service/parameter-type`
+- **Environment separation**: `/distro-nation/prod/service/parameter` vs `/distro-nation/dev/service/parameter`
+- **Descriptive names**: `/distro-nation/appsync/api-key` not `/distro-nation/key`
+
+### Access Control and IAM Policies
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": [
+        "arn:aws:ssm:<REGION>:*:parameter/distro-nation/appsync/*",
+        "arn:aws:ssm:<REGION>:*:parameter/distro-nation/token-api/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter"
+      ],
+      "Resource": [
+        "arn:aws:ssm:<REGION>:*:parameter/distro-nation/appsync/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ssm:ParameterType": "SecureString"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": [
+        "arn:aws:kms:<REGION>:*:key/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.<REGION>.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Encryption and Key Management
+- **Always use SecureString type** for sensitive parameters
+- **KMS encryption by default** for all credential storage
+- **Separate KMS keys** for different environments (prod vs dev)
+- **Key rotation policies** for both SSM parameters and KMS keys
+
+### Monitoring and Alerting
+```python
+# CloudWatch metrics for parameter access
+def setup_ssm_monitoring():
+    """Setup monitoring for SSM parameter operations"""
+    cloudwatch = CloudWatchClient()
+    
+    # Custom metrics for parameter access
+    cloudwatch.put_metric_data(
+        Namespace='DistroNation/SSM',
+        MetricData=[
+            {
+                'MetricName': 'ParameterAccess',
+                'Dimensions': [
+                    {'Name': 'ParameterName', 'Value': parameter_name},
+                    {'Name': 'Operation', 'Value': 'GetParameter'}
+                ],
+                'Value': 1.0,
+                'Unit': 'Count'
+            }
+        ]
+    )
+    
+    # Alerts for unusual parameter access patterns
+    cloudwatch.put_alarm(
+        AlarmName='SSM-UnusualParameterAccess',
+        ComparisonOperator='GreaterThanThreshold',
+        EvaluationPeriods=1,
+        MetricName='ParameterAccess',
+        Namespace='DistroNation/SSM',
+        Period=300,
+        Statistic='Sum',
+        Threshold=100.0,
+        ActionsEnabled=True,
+        AlarmDescription='Unusual SSM parameter access detected'
+    )
+```
+
+### Backup and Recovery
+- **Parameter versioning** enabled for all SecureString parameters
+- **Cross-region replication** for critical parameters
+- **Automated backup scripts** for parameter restoration
+- **Disaster recovery procedures** documented and tested
+
+This comprehensive API integration documentation provides complete coverage of all external service interactions with enhanced SSM Parameter Store security, enabling secure, efficient, and reliable operations within the YouTube CMS Metadata Management Tool ecosystem.
