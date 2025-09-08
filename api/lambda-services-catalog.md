@@ -88,6 +88,13 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 
 **Migration Note**: `cmsCustomidCleanup-dev` was migrated to ECS due to Lambda's 15-minute execution timeout limit. The function processes large datasets (38,000+ videos) requiring unlimited execution time.
 
+**Security Features**: All CMS functions implement advanced API key management through SSM Parameter Store:
+- **Automatic API Key Creation**: Functions can create new AppSync API keys when none exist
+- **Key Validation & Rotation**: Expired keys are automatically rotated with 30-day expiration buffers
+- **SSM Parameter Store Integration**: API keys are securely stored as encrypted parameters
+- **Comprehensive Audit Logging**: All key operations are logged for security compliance
+- **Fallback Mechanisms**: Environment variable fallbacks ensure service continuity
+
 ### 4. Database & Data Management Services
 
 #### Core Database Operations
@@ -184,6 +191,7 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 
 ### External API Dependencies
 - **YouTube Data API v3**: Video metadata, analytics, channel information
+- **YouTube Content ID API**: Asset management, custom ID operations, monetization policies
 - **Spotify Web API**: Artist data, track analytics, playlist information  
 - **TikTok API**: Video analytics, user engagement metrics
 - **Instagram Basic Display API**: Media fetching, user data
@@ -196,6 +204,8 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 - **Cognito**: User authentication and authorization
 - **API Gateway**: HTTP endpoint exposure
 - **CloudWatch**: Logging and monitoring
+- **Systems Manager (SSM) Parameter Store**: Secure API key and credential storage with encryption
+- **AppSync**: GraphQL API management with automatic API key creation and rotation
 - **Amazon ECS**: Containerized task execution for long-running processes
 - **Amazon ECR**: Container image storage and management
 - **Amazon EventBridge**: Event-driven workflow orchestration
@@ -230,10 +240,12 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 ## Security Model
 
 ### IAM Roles and Permissions
-- **Lambda Execution Roles**: Function-specific permissions
-- **Database Access**: PostgreSQL connection permissions
-- **External API Access**: Secrets Manager integration for API keys
-- **S3 Access**: Bucket-specific read/write permissions
+- **Lambda Execution Roles**: Function-specific permissions with least privilege access
+- **Database Access**: PostgreSQL connection permissions with encrypted connections
+- **External API Access**: SSM Parameter Store integration for secure API key management
+- **S3 Access**: Bucket-specific read/write permissions with server-side encryption
+- **SSM Parameter Store Access**: Encrypted parameter retrieval with audit logging
+- **AppSync API Management**: Automatic API key creation, validation, and rotation
 
 ### Authentication Integration
 - **Cognito Integration**: User pool triggers and custom auth flows
@@ -267,7 +279,8 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 4. **Error Handling**: Standardize error responses and retry logic
 
 ### Security Enhancements
-1. **Secrets Management**: Centralize API key and credential management
-2. **Network Security**: Implement VPC configuration where appropriate  
-3. **Audit Logging**: Enhanced logging for security-sensitive operations
-4. **Principle of Least Privilege**: Review and tighten IAM permissions
+1. **SSM Parameter Store Migration**: Complete migration from environment variables to encrypted SSM parameters
+2. **API Key Rotation**: Implement automated rotation schedules for all external API keys
+3. **Network Security**: Implement VPC configuration where appropriate  
+4. **Enhanced Audit Logging**: Comprehensive logging for all API key operations and lifecycle events
+5. **Principle of Least Privilege**: Review and tighten IAM permissions for SSM access
