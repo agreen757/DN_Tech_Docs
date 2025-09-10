@@ -26,9 +26,7 @@ Contents
    :maxdepth: 2
    :caption: Applications
 
-   applications/crm/architecture-overview
-   applications/youtube-cms/architecture-overview
-   applications/fuga-wav-uploader/architecture-overview
+   applications/index
 
 .. toctree::
    :maxdepth: 2
