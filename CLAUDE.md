@@ -1,0 +1,1 @@
+### Access - you have access to the /Users/adriangreen/Documents/Initial folder - this is where my Obsidian notes are.

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "linkedin": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "LINKEDIN_COOKIE",
+        "stickerdaniel/linkedin-mcp-server:latest"
+      ],
+      "env": {
+        "LINKEDIN_COOKIE": "li_at=AQEDAQFFKF8EJC1UAAABmRuxuIcAAAGZP748h04ANeDYGNC7Kir-K27xk9L3NcHRDL5TokcK4LZ1JDwStc48yR8QpjVoLk9hgQzyhk8-UQfWouYMKUM4hBKo-8IMHbi6pen2jCEuV9V2MEeJVjbiafNb"
+      }
+    }
+  }
+}
