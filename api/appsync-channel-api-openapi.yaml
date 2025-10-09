@@ -1,0 +1,595 @@
+openapi: 3.0.3
+info:
+  title: AppSync Channel API
+  description: |
+    Secure REST API for accessing Distro Nation's channel and video data.
+    
+    This API provides controlled external access to channel information without exposing 
+    the internal AppSync GraphQL API. It implements two-layer security with client API 
+    keys and internal AppSync API key management.
+    
+    ## Authentication
+    All requests require a valid client API key in the `X-API-Key` header.
+    
+    ## Rate Limiting
+    - 1000 requests per hour per API key
+    - 100 requests per minute burst capacity
+    - Rate limit headers included in all responses
+    
+    ## Error Handling
+    All errors follow a consistent JSON format with appropriate HTTP status codes.
+  version: 1.0.0
+  contact:
+    name: Distro Nation API Support
+    email: api-support@distronation.com
+  license:
+    name: Proprietary
+    url: https://distronation.com/terms
+
+servers:
+  - url: https://api.distronation.com/channels
+    description: Production server
+  - url: https://staging-api.distronation.com/channels
+    description: Staging server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /channels:
+    get:
+      summary: List all channels
+      description: Retrieve all partner channels with pagination support
+      operationId: listChannels
+      parameters:
+        - name: limit
+          in: query
+          description: Number of results per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: nextToken
+          in: query
+          description: Pagination token for subsequent pages
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /channels/{channelId}:
+    get:
+      summary: Get channel by ID
+      description: Retrieve a specific channel by its unique identifier
+      operationId: getChannel
+      parameters:
+        - name: channelId
+          in: path
+          description: The unique channel identifier
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /channels/search:
+    get:
+      summary: Search channels by custom ID
+      description: Find channels by their custom identifier
+      operationId: searchChannels
+      parameters:
+        - name: customId
+          in: query
+          description: The custom identifier to search for
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /channels/custom-ids:
+    get:
+      summary: Get custom IDs list
+      description: Retrieve a list of all custom IDs for batch processing operations
+      operationId: getCustomIds
+      parameters:
+        - name: format
+          in: query
+          description: Response format
+          required: false
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+        - name: limit
+          in: query
+          description: Number of results per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 1000
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomIdsResponse'
+            text/csv:
+              schema:
+                type: string
+                example: |
+                  customId
+                  custom-id-1
+                  custom-id-2
+                  custom-id-3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /channels/health:
+    get:
+      summary: Health check
+      description: API health and status endpoint
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Client API key for authentication
+
+  headers:
+    X-RateLimit-Limit:
+      description: The number of allowed requests in the current period
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: The number of remaining requests in the current period
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: The time at which the current rate limit window resets (Unix timestamp)
+      schema:
+        type: integer
+
+  schemas:
+    Channel:
+      type: object
+      required:
+        - id
+        - channelId
+        - customId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique channel identifier
+          example: "channel-uuid-123"
+        channelId:
+          type: string
+          description: Platform-specific channel identifier
+          example: "youtube-channel-id"
+        customId:
+          type: string
+          description: Custom identifier for the channel
+          example: "custom-identifier-123"
+        displayName:
+          type: string
+          nullable: true
+          description: Human-readable channel name
+          example: "Channel Display Name"
+        createdAt:
+          type: string
+          format: date-time
+          description: Channel creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-15T10:30:00Z"
+
+    ChannelListResponse:
+      type: object
+      required:
+        - data
+        - status
+        - timestamp
+      properties:
+        data:
+          type: object
+          required:
+            - channels
+            - totalCount
+          properties:
+            channels:
+              type: array
+              items:
+                $ref: '#/components/schemas/Channel'
+            nextToken:
+              type: string
+              nullable: true
+              description: Token for next page of results
+            totalCount:
+              type: integer
+              description: Total number of channels
+              example: 150
+        status:
+          type: string
+          enum: [success]
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    ChannelResponse:
+      type: object
+      required:
+        - data
+        - status
+        - timestamp
+      properties:
+        data:
+          type: object
+          required:
+            - channel
+          properties:
+            channel:
+              $ref: '#/components/schemas/Channel'
+        status:
+          type: string
+          enum: [success]
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    ChannelSearchResponse:
+      type: object
+      required:
+        - data
+        - status
+        - timestamp
+      properties:
+        data:
+          type: object
+          required:
+            - channels
+          properties:
+            channels:
+              type: array
+              items:
+                $ref: '#/components/schemas/Channel'
+        status:
+          type: string
+          enum: [success]
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    CustomIdsResponse:
+      type: object
+      required:
+        - data
+        - status
+        - timestamp
+      properties:
+        data:
+          type: object
+          required:
+            - customIds
+            - totalCount
+          properties:
+            customIds:
+              type: array
+              items:
+                type: string
+              example: ["custom-id-1", "custom-id-2", "custom-id-3"]
+            totalCount:
+              type: integer
+              description: Total number of custom IDs
+              example: 150
+        status:
+          type: string
+          enum: [success]
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        version:
+          type: string
+          example: "1.0.0"
+        uptime:
+          type: integer
+          description: Service uptime in seconds
+          example: 3600
+        dependencies:
+          type: object
+          properties:
+            appsync:
+              type: string
+              enum: [healthy, unhealthy]
+              example: healthy
+            dynamodb:
+              type: string
+              enum: [healthy, unhealthy]
+              example: healthy
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - status
+        - timestamp
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code identifier
+              example: "INVALID_API_KEY"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Invalid or missing client API key"
+            details:
+              type: string
+              description: Additional error context
+              example: "The provided API key is not valid or has expired"
+        status:
+          type: string
+          enum: [error]
+          example: error
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        requestId:
+          type: string
+          description: Unique request identifier for debugging
+          example: "req-123456789"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "INVALID_PARAMETERS"
+              message: "Invalid request parameters"
+              details: "The 'limit' parameter must be between 1 and 100"
+            status: "error"
+            timestamp: "2024-01-15T10:30:00Z"
+            requestId: "req-123456789"
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "INVALID_API_KEY"
+              message: "Invalid or missing client API key"
+              details: "The provided API key is not valid or has expired"
+            status: "error"
+            timestamp: "2024-01-15T10:30:00Z"
+            requestId: "req-123456789"
+
+    NotFound:
+      description: Resource not found
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "CHANNEL_NOT_FOUND"
+              message: "Requested channel does not exist"
+              details: "No channel found with the specified ID"
+            status: "error"
+            timestamp: "2024-01-15T10:30:00Z"
+            requestId: "req-123456789"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "RATE_LIMIT_EXCEEDED"
+              message: "Too many requests"
+              details: "Rate limit of 1000 requests per hour exceeded"
+            status: "error"
+            timestamp: "2024-01-15T10:30:00Z"
+            requestId: "req-123456789"
+
+    InternalServerError:
+      description: Internal server error
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "INTERNAL_ERROR"
+              message: "Internal server error"
+              details: "An unexpected error occurred while processing the request"
+            status: "error"
+            timestamp: "2024-01-15T10:30:00Z"
+            requestId: "req-123456789"
+
+tags:
+  - name: Channels
+    description: Channel management operations
+  - name: Health
+    description: API health and monitoring
