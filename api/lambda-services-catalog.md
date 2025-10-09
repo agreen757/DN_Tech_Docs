@@ -58,6 +58,19 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 | `dn_channels_fetch` | nodejs18.x | Channel data fetching | Multiple platforms |
 | `dn_get_channels` | nodejs18.x | Channel information retrieval | Internal DB |
 
+#### External API Services
+| Function | Runtime | Purpose | API Endpoint | Status |
+|----------|---------|---------|--------------|---------|
+| `appsyncChannelApi-prod` | nodejs20.x | Secure channel data API for external apps | `/channels/*` | **Production** |
+
+**AppSync Channel API Features**:
+- **Secure External Access**: REST API gateway for controlled channel data access
+- **Two-Layer Authentication**: Client API keys + internal AppSync API key management
+- **Comprehensive Endpoints**: List channels, search by custom ID, health monitoring
+- **Rate Limiting**: 1000 requests/hour per API key with burst capacity
+- **Production Ready**: Full monitoring, error handling, and audit logging
+- **Client SDKs**: Node.js and Python integration examples provided
+
 ### 3. Media & Content Management Services
 
 #### Content Processing
@@ -263,6 +276,94 @@ Distro Nation operates 84+ Lambda functions organized into functional service do
 - **X-Ray Integration**: Available but not consistently implemented
 - **Correlation IDs**: Request tracking across service boundaries
 - **Performance Monitoring**: End-to-end request tracing
+
+## AppSync GraphQL API
+
+### Overview
+The AppSync GraphQL API provides secure access to channel and video data with built-in authentication, CORS support, and throttling capabilities.
+
+### API Configuration
+- **Authentication**: API Key-based authentication
+- **CORS**: Built-in support for cross-origin requests
+- **Throttling**: 1000 RPS default limit per account
+- **HTTPS**: Enforced by default
+- **Environment**: Development
+
+### Data Models
+
+#### Channel Model
+```graphql
+type Channel {
+  id: ID!
+  channelId: String!
+  customId: String!
+  displayName: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+```
+
+#### Video Model
+```graphql
+type Video {
+  id: ID!
+  videoID: String!
+  customId: String!
+  channelID: ID!
+  channel_display_name: String!
+  video_title: String
+  views: Int
+  # Additional metadata fields...
+}
+```
+
+#### Health Check Model
+```graphql
+type HealthCheck {
+  status: String!
+  timestamp: String!
+  version: String!
+}
+```
+
+### Available Operations
+
+#### Channel Operations
+- **`listChannels`**: Retrieve all channels with pagination and filtering
+- **`getChannel`**: Get specific channel by ID
+- **`channelsByCustomId`**: Search channels by custom ID (newly added)
+
+#### Video Operations
+- **`listVideos`**: Retrieve all videos with pagination
+- **`videosbyChannel`**: Get videos for a specific channel
+- **`videosbyChannelDisplayName`**: Search videos by channel display name
+
+#### System Operations
+- **`healthCheck`**: API health monitoring endpoint (newly added)
+
+### Security Features
+- **API Key Authentication**: Secure access control
+- **Encrypted Parameters**: API keys stored in SSM Parameter Store
+- **Request Validation**: Input validation and sanitization
+- **Rate Limiting**: Built-in throttling protection
+- **Audit Logging**: Request/response logging via CloudWatch
+
+### Recent Enhancements
+- Added `channelsByCustomId` query for custom ID search capabilities
+- Implemented `healthCheck` endpoint for monitoring and observability
+- Enhanced Channel model with indexed custom ID field
+- Enabled API key deployment for production readiness
+
+### Integration Patterns
+- **Lambda Functions**: Backend functions use GraphQL mutations for data updates
+- **External Applications**: Can use GraphQL queries for read operations
+- **Monitoring Systems**: Health check endpoint for availability monitoring
+
+### Performance Characteristics
+- **Response Time**: Sub-second for most queries
+- **Scalability**: Auto-scaling with AWS AppSync
+- **Caching**: Built-in query result caching
+- **Global Distribution**: Available via AWS global infrastructure
 
 ## Integration Recommendations
 
