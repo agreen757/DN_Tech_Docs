@@ -9,16 +9,20 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ### Authentication and Session Management
 
 #### Login Endpoint Integration
+
 **Endpoint**: `POST /api/fuga/login`
 **Purpose**: Authenticate with FUGA API and establish session
 **Request Format**:
+
 ```json
 {
   "username": "your_fuga_username",
   "password": "your_fuga_password"
 }
 ```
+
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -29,15 +33,19 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   }
 }
 ```
+
 **Integration Details**:
+
 - Session-based authentication with token management
 - Automatic token refresh and expiration handling
 - Secure credential storage in backend sessions
 - Frontend authentication state management
 
 #### Session Validation
+
 **Implementation**: Middleware validation for all FUGA API requests
 **Features**:
+
 - Automatic session validation before API calls
 - Token refresh on expiration
 - Graceful authentication failure handling
@@ -46,9 +54,11 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ### Product Management Integration
 
 #### Product Creation
+
 **Endpoint**: `POST /api/fuga/products`
 **Purpose**: Create album/product in FUGA system
 **Request Format**:
+
 ```json
 {
   "name": "Album Title",
@@ -61,7 +71,9 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   "language": "en"
 }
 ```
+
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -73,44 +85,54 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   }
 }
 ```
+
 **Integration Features**:
+
 - Comprehensive album metadata validation
 - UPC code format validation and generation
 - Label and artist reference validation
 - Territory configuration management
 
 #### Product Retrieval
+
 **Endpoint**: `GET /api/fuga/products/<id>`
 **Purpose**: Retrieve existing product information
 **Integration Features**:
+
 - Product status tracking
 - Metadata synchronization
 - Distribution status monitoring
 - Update conflict resolution
 
 #### Territory Management
+
 **Endpoint**: `PUT /api/fuga/products/<id>/territories`
 **Purpose**: Configure distribution territories
 **Request Format**:
+
 ```json
 {
   "territories": [
-    {"code": "US", "enabled": true},
-    {"code": "CA", "enabled": true},
-    {"code": "GB", "enabled": false}
+    { "code": "US", "enabled": true },
+    { "code": "CA", "enabled": true },
+    { "code": "GB", "enabled": false }
   ]
 }
 ```
+
 **Integration Features**:
+
 - Global territory selection interface
 - Region-based territory grouping
 - Territory validation and constraints
 - Distribution scope management
 
 #### Album Artwork Upload
+
 **Endpoint**: `POST /api/fuga/products/<id>/image`
 **Purpose**: Upload album artwork to FUGA product
 **Integration Features**:
+
 - Image format validation (JPEG, PNG)
 - Image resolution requirements (minimum 1400x1400)
 - Automatic image optimization
@@ -119,9 +141,11 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ### Asset Management Integration
 
 #### Asset Creation
+
 **Endpoint**: `POST /api/fuga/assets`
 **Purpose**: Create track/asset in FUGA system
 **Request Format**:
+
 ```json
 {
   "name": "Track Title",
@@ -132,7 +156,9 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   "explicit": false
 }
 ```
+
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -144,25 +170,31 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   }
 }
 ```
+
 **Integration Features**:
+
 - ISRC code validation and generation
 - Track metadata validation
 - Duration calculation from audio files
 - Explicit content flagging
 
 #### Asset Assignment to Products
+
 **Endpoint**: `POST /api/fuga/products/<id>/assets`
 **Purpose**: Add asset to product (album)
 **Integration Features**:
+
 - Track ordering within albums
 - Asset-product relationship management
 - Bulk asset assignment
 - Track listing validation
 
 #### Audio File Upload
+
 **Endpoint**: `POST /api/fuga/assets/<id>/audio`
 **Purpose**: Upload audio file directly to FUGA asset
 **Integration Features**:
+
 - Direct WAV file streaming to FUGA
 - Audio format validation (PCM WAV only)
 - Floating point WAV rejection with user feedback
@@ -170,8 +202,10 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 - File integrity validation
 
 #### Audio Format Validation
+
 **Implementation**: ffmpeg integration for audio analysis
 **Validation Process**:
+
 1. Audio file analysis using ffmpeg probe
 2. Codec detection for floating point formats
 3. Sample rate and bit depth validation
@@ -179,19 +213,23 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 5. User-friendly error messages for format issues
 
 **Supported Formats**:
+
 - PCM WAV files (16-bit, 24-bit, 32-bit integer)
 - Standard sample rates (44.1kHz, 48kHz, 96kHz, etc.)
 - Mono and stereo channel configurations
 
 **Rejected Formats**:
+
 - Floating point WAV files (32-bit float, 64-bit float)
 - Compressed audio formats (MP3, FLAC, AAC)
 - Non-standard sample rates or configurations
 
 #### Contributor Management
+
 **Endpoint**: `POST /api/fuga/assets/<id>/contributors`
 **Purpose**: Add contributors to track assets
 **Request Format**:
+
 ```json
 {
   "contributors": [
@@ -208,7 +246,9 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
   ]
 }
 ```
+
 **Integration Features**:
+
 - Multiple contributor roles per track
 - Artist and person reference validation
 - Role-specific metadata requirements
@@ -217,13 +257,16 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ### Data Management Integration
 
 #### Reference Data Caching
+
 **Endpoints**:
+
 - `GET /api/fuga/artists` - Cached artists list
-- `GET /api/fuga/labels` - Cached labels list  
+- `GET /api/fuga/labels` - Cached labels list
 - `GET /api/fuga/people` - Cached people/contributors list
 - `GET /api/fuga/genres` - Cached genres list
 
 **Integration Features**:
+
 - Local JSON file caching for performance
 - Automatic refresh scheduling (default: 24 hours)
 - Manual refresh triggers
@@ -231,23 +274,29 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 - Search and filtering capabilities
 
 #### Search Functionality
+
 **Endpoints**:
+
 - `GET /api/fuga/artist/<name>/search` - Artist search
-- `GET /api/fuga/person/<name>/search` - Person search  
+- `GET /api/fuga/person/<name>/search` - Person search
 - `GET /api/fuga/labels/<name>/search` - Label search
 
 **Integration Features**:
+
 - Fuzzy matching algorithms
 - Real-time search suggestions
 - Result ranking and scoring
 - Performance-optimized local search
 
 #### Data Synchronization
+
 **Endpoints**:
+
 - `POST /api/fuga/refresh-data` - Manual data refresh
 - `GET /api/fuga/data-status` - Sync status information
 
 **Integration Features**:
+
 - Scheduled automatic synchronization
 - Manual refresh capabilities
 - Sync status tracking and reporting
@@ -257,8 +306,10 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ## Error Handling and Response Processing
 
 ### FUGA API Error Parsing
+
 **Implementation**: Comprehensive error response parsing
 **Error Categories**:
+
 - Authentication errors (invalid credentials, expired sessions)
 - Validation errors (invalid UPC, ISRC, metadata)
 - File format errors (floating point WAV, invalid formats)
@@ -266,6 +317,7 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 - Server errors (FUGA service unavailability)
 
 **Error Response Format**:
+
 ```json
 {
   "success": false,
@@ -280,14 +332,17 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ```
 
 ### User-Friendly Error Messages
+
 **Implementation**: Error message translation and formatting
 **Features**:
+
 - Technical error translation to user-friendly language
 - Actionable error messages with resolution steps
 - Context-aware error handling
 - Error categorization for appropriate user responses
 
 **Example Error Translations**:
+
 - `UPC_CODE_WRONG` → "UPC code format is invalid. Please check the 12-digit code."
 - `FIELD_VALUE_NOT_IN_RANGE` → "P Line Year must be a valid 4-digit year."
 - `Floating point detected` → "WAV file is in floating point format. Please convert to integer PCM format."
@@ -295,8 +350,10 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ## AWS Services Integration
 
 ### ECS (Elastic Container Service)
+
 **Purpose**: Container orchestration and deployment
 **Integration Features**:
+
 - Containerized backend and frontend services
 - Auto-scaling based on demand
 - Health check integration
@@ -304,24 +361,30 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 - Resource management and optimization
 
 ### ECR (Elastic Container Registry)
+
 **Purpose**: Container image storage and management
 **Integration Features**:
+
 - Automated image builds and pushes
 - Image versioning and tagging
 - Security scanning integration
 - Multi-stage build optimization
 
 ### Application Load Balancer
+
 **Purpose**: Traffic distribution and SSL termination
 **Integration Features**:
+
 - HTTPS certificate management
 - Health check endpoints
 - Request routing and load balancing
 - SSL/TLS termination
 
 ### CloudWatch
+
 **Purpose**: Monitoring and logging
 **Integration Features**:
+
 - Application performance metrics
 - Error rate monitoring
 - Custom metrics for upload success rates
@@ -331,22 +394,28 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ## API Rate Limiting and Performance
 
 ### Rate Limiting Strategy
+
 **Implementation**: Respectful API usage with FUGA platform
 **Features**:
+
 - Request throttling to prevent API quota exhaustion
 - Retry logic with exponential backoff
 - Queue management for bulk operations
 - User feedback for rate limiting situations
 
 ### Performance Optimization
+
 **Strategies**:
+
 - Local caching of reference data to reduce API calls
 - Batch operations for multiple track uploads
 - Efficient error handling to prevent unnecessary retries
 - Connection pooling for API requests
 
 ### Monitoring and Analytics
+
 **Metrics Tracked**:
+
 - API response times and success rates
 - Upload completion rates and error frequency
 - User workflow completion statistics
@@ -355,22 +424,28 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ## Security Considerations
 
 ### Credential Management
+
 **Implementation**: Secure handling of sensitive information
 **Features**:
+
 - Environment variable configuration for credentials
 - No hardcoded API keys or passwords in code
 - Session-based authentication with secure token storage
 - Automatic credential rotation support
 
 ### Data Protection
+
 **Measures**:
+
 - HTTPS enforcement for all API communications
 - Secure session management with appropriate expiration
 - Input validation and sanitization
 - Protection against injection attacks
 
 ### Access Control
+
 **Implementation**:
+
 - Role-based access to FUGA API functions
 - User permission validation
 - Secure API endpoint access control
@@ -379,8 +454,10 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 ## Integration Testing and Validation
 
 ### API Testing Suite
+
 **Implementation**: Comprehensive test coverage for all integrations
 **Test Coverage**:
+
 - Authentication flow validation
 - Product and asset creation workflows
 - File upload and validation processes
@@ -388,10 +465,10 @@ The FUGA WAV Uploader integrates with multiple APIs and services to provide a co
 - Data synchronization and caching
 
 ### Integration Health Monitoring
+
 **Monitoring Points**:
+
 - FUGA API availability and response times
 - Upload success rates and error frequencies
 - Data synchronization status and freshness
 - System resource utilization and performance
-
-This comprehensive API integration documentation ensures reliable, secure, and efficient communication between the FUGA WAV Uploader and all external services, providing users with a seamless music distribution experience.
