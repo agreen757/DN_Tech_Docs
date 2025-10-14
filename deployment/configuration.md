@@ -352,7 +352,7 @@ API Configuration:
     Description: Primary API Gateway endpoint
 
   /distronation/prod/api/graphql-endpoint:
-    Value: https://jjxoyzwu4naxzpelrk6ncmoasi.appsync-api.<REGION>.amazonaws.com
+    Value: https://<ID>.appsync-api.<REGION>.amazonaws.com
     Type: String
     Description: AppSync GraphQL endpoint
 
@@ -1174,12 +1174,5 @@ Tasks:
 - [Rollback Procedures](./rollback.md)
 - [Security Policies](../security/security-policies.md)
 - [Access Control Matrix](../security/access-control-matrix.md)
-
----
-
-**Document Version**: 1.0  
-**Last Updated**: July 24, 2025  
-**Next Review**: October 24, 2025  
-**Owner**: Adrian Green, Head of Engineering
 
 _This document contains sensitive configuration management information. Distribution is restricted to authorized personnel with appropriate access levels._

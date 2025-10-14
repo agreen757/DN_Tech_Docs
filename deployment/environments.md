@@ -1,30 +1,33 @@
 # Environment Specifications
 
 ## Overview
+
 This document provides comprehensive specifications for all Distro Nation environments, including development, staging, and production configurations. It serves as the authoritative reference for environment-specific configurations, resource allocations, and deployment procedures across the hybrid AWS-Firebase architecture.
 
 ## Executive Summary
 
 ### Environment Architecture
+
 - **Production (main)**: Live production environment serving end users
-- **Staging**: Pre-production environment for final testing and validation  
+- **Staging**: Pre-production environment for final testing and validation
 - **Development (dev)**: Development environment for feature development and testing
 - **Local**: Developer local environments for initial development
 
 ### Environment Distribution
+
 ```yaml
 Production Environment:
   AWS Account: <AWS_ACCOUNT_ID>
   Primary Region: <REGION>
-  Users: Live traffic 
+  Users: Live traffic
   Availability: 99.9% target SLA
-  
+
 Staging Environment:
   AWS Account: Same (isolated by naming/tagging)
-  Primary Region: <REGION>  
+  Primary Region: <REGION>
   Users: Internal testing team
   Availability: 95% target (best effort)
-  
+
 Development Environment:
   AWS Account: Same (isolated by naming/tagging)
   Primary Region: <REGION>
@@ -37,25 +40,27 @@ Development Environment:
 ### 1.1 Environment Purpose and Usage
 
 #### Production Environment (main)
+
 ```yaml
 Purpose: Live production services for end users
-Primary Users: 
+Primary Users:
   - End users (artists, content creators)
   - External API consumers
   - Production support team
-  
+
 Key Characteristics:
   - High availability and performance requirements
   - Strict change control and approval processes
   - Comprehensive monitoring and alerting
   - Automated backup and disaster recovery
   - Production-grade security controls
-  
+
 Business Hours: 24/7 operation
 Maintenance Windows: Sunday 2-4 AM EST (planned maintenance)
 ```
 
 #### Staging Environment
+
 ```yaml
 Purpose: Pre-production testing and validation
 Primary Users:
@@ -63,33 +68,34 @@ Primary Users:
   - Product managers
   - Development team (integration testing)
   - Stakeholders (demo and review)
-  
+
 Key Characteristics:
   - Production-like configuration with reduced scale
   - Automated testing integration
   - Safe environment for breaking changes
   - Integration with external APIs (test endpoints)
   - Performance testing capabilities
-  
+
 Business Hours: 8 AM - 8 PM EST
 Maintenance Windows: Flexible, as needed
 ```
 
 #### Development Environment (dev)
+
 ```yaml
 Purpose: Feature development and unit testing
 Primary Users:
   - Development team
   - Individual developers
   - Automated CI/CD pipelines
-  
+
 Key Characteristics:
   - Rapid iteration and deployment
   - Relaxed security controls for development speed
   - Mock services and test data
   - Development tools and debugging enabled
   - Cost-optimized configuration
-  
+
 Business Hours: 8 AM - 10 PM EST
 Maintenance Windows: Any time, with team notification
 ```
@@ -99,9 +105,9 @@ Maintenance Windows: Any time, with team notification
 ```mermaid
 graph LR
     A[Local Development] --> B[Development Environment]
-    B --> C[Staging Environment]  
+    B --> C[Staging Environment]
     C --> D[Production Environment]
-    
+
     A1[Feature Branch] --> B1[Deploy to Dev]
     B1 --> C1[Merge to Staging Branch]
     C1 --> D1[Deploy to Staging]
@@ -110,17 +116,19 @@ graph LR
 ```
 
 #### Promotion Criteria
-| Environment | Promotion Trigger | Approval Required | Testing Requirements |
-|-------------|------------------|-------------------|---------------------|
-| **Local → Dev** | Code commit to feature branch | ❌ No | Unit tests pass |
-| **Dev → Staging** | Merge to staging branch | ✅ Team lead approval | Integration tests pass |
-| **Staging → Production** | Release approval | ✅ Product manager + Engineering lead | Full regression testing |
+
+| Environment              | Promotion Trigger             | Approval Required                     | Testing Requirements    |
+| ------------------------ | ----------------------------- | ------------------------------------- | ----------------------- |
+| **Local → Dev**          | Code commit to feature branch | ❌ No                                 | Unit tests pass         |
+| **Dev → Staging**        | Merge to staging branch       | ✅ Team lead approval                 | Integration tests pass  |
+| **Staging → Production** | Release approval              | ✅ Product manager + Engineering lead | Full regression testing |
 
 ## 2. AWS Infrastructure Configuration
 
 ### 2.1 Compute Resources
 
 #### Lambda Functions
+
 ```yaml
 Production Configuration:
   Memory Allocation: 512MB - 1024MB (optimized per function)
@@ -128,14 +136,14 @@ Production Configuration:
   Concurrency: Reserved concurrency for critical functions
   Dead Letter Queues: Enabled for all async functions
   VPC Configuration: Private subnets for database access
-  
+
 Staging Configuration:
   Memory Allocation: 256MB - 512MB (cost optimized)
   Timeout: Same as production
   Concurrency: Shared concurrency pool
   Dead Letter Queues: Enabled
   VPC Configuration: Same network as production
-  
+
 Development Configuration:
   Memory Allocation: 128MB - 256MB (minimal cost)
   Timeout: Reduced timeouts for faster feedback
@@ -145,6 +153,7 @@ Development Configuration:
 ```
 
 #### EC2 Instances
+
 ```yaml
 Production Instances:
   Primary Instance: i-0063537094eb961dd (t3.micro, running)
@@ -152,13 +161,13 @@ Production Instances:
   Auto Scaling: Manual scaling currently
   Monitoring: CloudWatch detailed monitoring
   Backup Strategy: Daily EBS snapshots
-  
+
 Staging Instances:
   Configuration: Smaller instance types (t2.micro)
   Purpose: Testing and validation services
   Auto Scaling: Not configured
   Monitoring: Basic CloudWatch monitoring
-  
+
 Development Instances:
   Configuration: Spot instances where possible
   Purpose: Development tools and services
@@ -169,6 +178,7 @@ Development Instances:
 ### 2.2 Database Configuration
 
 #### Aurora PostgreSQL Cluster
+
 ```yaml
 Production Database:
   Cluster: database-2-cluster
@@ -178,7 +188,7 @@ Production Database:
   Backup Retention: 30 days
   Multi-AZ: Enabled
   Encryption: Enabled with AWS KMS
-  
+
 Staging Database:
   Cluster: [Staging cluster name - to be documented]
   Engine: Aurora PostgreSQL Serverless v1
@@ -187,7 +197,7 @@ Staging Database:
   Backup Retention: 7 days
   Multi-AZ: Disabled (cost savings)
   Encryption: Enabled
-  
+
 Development Database:
   Cluster: [Dev cluster name - to be documented]
   Engine: Aurora PostgreSQL Serverless v1
@@ -199,19 +209,20 @@ Development Database:
 ```
 
 #### Database Access Patterns
+
 ```yaml
 Production Access:
   Direct Access: Prohibited (RDS Data API only)
   Connection Pooling: Built into Serverless
   Read Replicas: Automatic with Aurora Serverless
   Monitoring: Performance Insights enabled
-  
+
 Staging Access:
   Direct Access: Limited to senior developers
   Connection Pooling: RDS Data API preferred
   Read Replicas: Not configured
   Monitoring: Basic monitoring
-  
+
 Development Access:
   Direct Access: Allowed for development team
   Connection Pooling: RDS Data API or direct connections
@@ -222,6 +233,7 @@ Development Access:
 ### 2.3 Storage Configuration
 
 #### S3 Buckets by Environment
+
 ```yaml
 Production S3 Buckets:
   Content Storage:
@@ -233,7 +245,7 @@ Production S3 Buckets:
     - Lifecycle Policies: Intelligent tiering
     - Cross-Region Replication: Enabled for critical data
     - Public Access: Blocked by default
-    
+
 Staging S3 Buckets:
   Content Storage:
     - [Staging bucket names - to be documented]
@@ -243,7 +255,7 @@ Staging S3 Buckets:
     - Lifecycle Policies: 30-day deletion after transition
     - Cross-Region Replication: Disabled
     - Public Access: Blocked by default
-    
+
 Development S3 Buckets:
   Content Storage:
     - [Dev bucket names - to be documented]
@@ -258,6 +270,7 @@ Development S3 Buckets:
 ### 2.4 Network Configuration
 
 #### VPC and Networking
+
 ```yaml
 Production Network:
   VPC: [VPC ID - to be documented]
@@ -269,13 +282,13 @@ Production Network:
     - App tier: Internal communication only
     - Database tier: Database ports from app tier only
   NAT Gateways: 2 (one per AZ for high availability)
-  
+
 Staging Network:
   VPC: Shared with production (isolated by security groups)
   Subnets: Same subnet structure
   Security Groups: Staging-specific rules
   NAT Gateways: Shared with production
-  
+
 Development Network:
   VPC: Shared or separate (cost consideration)
   Subnets: Simplified structure
@@ -284,19 +297,20 @@ Development Network:
 ```
 
 #### DNS and Domain Management
+
 ```yaml
 Production Domains:
   Primary: [Production domain - to be documented]
   Route53 Hosted Zone: Z0969604XDAUQX7C50JF
   SSL Certificates: AWS Certificate Manager
   CDN: CloudFront distributions (5 active)
-  
+
 Staging Domains:
   Primary: [Staging subdomain - to be documented]
   Route53: Same hosted zone with staging records
   SSL Certificates: Wildcard or staging-specific certs
   CDN: Shared CloudFront or staging-specific
-  
+
 Development Domains:
   Primary: [Dev subdomain - to be documented]
   Route53: Same hosted zone with dev records
@@ -309,24 +323,25 @@ Development Domains:
 ### 3.1 Firebase Projects by Environment
 
 #### Production Firebase Project
+
 ```yaml
 Project Configuration:
   Project ID: [Production project ID - to be documented]
   Project Name: Distro Nation Production
   Billing Account: [Production billing account]
   Region: us-central1 (Firebase default)
-  
+
 Authentication:
   Providers: Email/Password, Google OAuth
   Security Rules: Production-hardened rules
   Custom Claims: Role-based access control
   Session Duration: 24 hours
-  
+
 Realtime Database:
   Rules: Strict read/write permissions
   Indexing: Optimized for production queries
   Backup: Daily exports to Google Cloud Storage
-  
+
 Cloud Storage:
   Rules: User-based access control
   Retention: Long-term retention for user content
@@ -334,24 +349,25 @@ Cloud Storage:
 ```
 
 #### Staging Firebase Project
+
 ```yaml
 Project Configuration:
   Project ID: [Staging project ID - to be documented]
   Project Name: Distro Nation Staging
   Billing Account: Same as production
   Region: us-central1
-  
+
 Authentication:
   Providers: Same as production
   Security Rules: Relaxed for testing
   Custom Claims: Mirror production structure
   Session Duration: 24 hours
-  
+
 Realtime Database:
   Rules: More permissive for testing
   Indexing: Similar to production
   Backup: Weekly exports
-  
+
 Cloud Storage:
   Rules: Relaxed for testing uploads
   Retention: 30-day cleanup policy
@@ -359,24 +375,25 @@ Cloud Storage:
 ```
 
 #### Development Firebase Project
+
 ```yaml
 Project Configuration:
   Project ID: [Dev project ID - to be documented]
   Project Name: Distro Nation Development
   Billing Account: Development/testing account
   Region: us-central1
-  
+
 Authentication:
   Providers: Email/Password (simplified)
   Security Rules: Permissive for development
   Custom Claims: Basic role structure
   Session Duration: 7 days (development convenience)
-  
+
 Realtime Database:
   Rules: Open for development (secure sensitive data)
   Indexing: Minimal indexing
   Backup: Not configured (test data)
-  
+
 Cloud Storage:
   Rules: Permissive for testing
   Retention: 7-day cleanup policy
@@ -386,6 +403,7 @@ Cloud Storage:
 ### 3.2 Firebase Security Rules by Environment
 
 #### Production Security Rules
+
 ```javascript
 // Realtime Database Rules (Production)
 {
@@ -425,6 +443,7 @@ service firebase.storage {
 ```
 
 #### Development Security Rules
+
 ```javascript
 // Realtime Database Rules (Development)
 {
@@ -434,7 +453,7 @@ service firebase.storage {
   }
 }
 
-// Storage Rules (Development)  
+// Storage Rules (Development)
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
@@ -450,6 +469,7 @@ service firebase.storage {
 ### 4.1 API Gateway Environments
 
 #### Production API Configuration
+
 ```yaml
 dn-api (Production):
   API ID: <API_GATEWAY_ID_2>.execute-api.<REGION>.amazonaws.com
@@ -459,18 +479,19 @@ dn-api (Production):
     Rate Limit: 10000 requests/second
   Logging: CloudWatch logs enabled
   Caching: Enabled for GET requests (300 second TTL)
-  
+
 distronationfmGeneralAccess (Production):
   API ID: <API_GATEWAY_ID_1>.execute-api.<REGION>.amazonaws.com
   Stage: main
   Authentication: AWS IAM required
   Throttling:
-    Burst Limit: 5000 requests  
+    Burst Limit: 5000 requests
     Rate Limit: 10000 requests/second
   Logging: CloudWatch logs enabled
 ```
 
 #### Staging API Configuration
+
 ```yaml
 API Configuration:
   Stages: staging (separate stage deployment)
@@ -478,7 +499,7 @@ API Configuration:
   Logging: Enhanced logging for debugging
   Caching: Disabled or short TTL (60 seconds)
   Authentication: Same as production
-  
+
 Testing Features:
   - Request/Response logging enabled
   - X-Ray tracing enabled
@@ -486,6 +507,7 @@ Testing Features:
 ```
 
 #### Development API Configuration
+
 ```yaml
 API Configuration:
   Stages: dev (separate stage deployment)
@@ -493,7 +515,7 @@ API Configuration:
   Logging: Full request/response logging
   Caching: Disabled
   Authentication: Relaxed for development
-  
+
 Development Features:
   - API Gateway console testing enabled
   - CORS configured for local development
@@ -503,6 +525,7 @@ Development Features:
 ### 4.2 AppSync GraphQL API Configuration
 
 #### Production AppSync APIs
+
 ```yaml
 distrofmgraphql-main:
   API ID: jjxoyzwu4naxzpelrk6ncmoasi
@@ -511,7 +534,7 @@ distrofmgraphql-main:
   Resolvers: Optimized for performance
   Caching: Enabled (TTL varies by resolver)
   Logging: Error logging only
-  
+
 Video Management APIs:
   - dnbackendfunctionnew-dev: bqgx7vc6ubf57pg2qewyx5ti2u
   - dnbackendfunctions-dev: yajg2ikl3bgf3gzpw5cg5r6ql4
@@ -519,12 +542,13 @@ Video Management APIs:
 ```
 
 #### Development AppSync Configuration
+
 ```yaml
 Schema Management:
   - Separate development schemas for testing
   - Schema versioning and migration testing
   - Local schema development with Amplify CLI
-  
+
 Testing Features:
   - GraphQL playground enabled
   - Detailed resolver logging
@@ -536,20 +560,21 @@ Testing Features:
 ### 5.1 Environment Variables and Secrets
 
 #### Configuration Hierarchy
+
 ```yaml
-Configuration Precedence (highest to lowest):
-  1. Runtime environment variables
+Configuration Precedence (highest to lowest): 1. Runtime environment variables
   2. AWS Secrets Manager values
   3. AWS Systems Manager Parameter Store
   4. Default configuration values
-  
+
 Environment Variable Naming Convention:
   Production: PROD_[SERVICE]_[SETTING]
-  Staging: STAGING_[SERVICE]_[SETTING]  
+  Staging: STAGING_[SERVICE]_[SETTING]
   Development: DEV_[SERVICE]_[SETTING]
 ```
 
 #### Secrets Management Strategy
+
 ```yaml
 AWS Secrets Manager:
   Production Secrets:
@@ -557,12 +582,12 @@ AWS Secrets Manager:
     - prod/distronation/youtube-api-keys
     - prod/distronation/spotify-credentials
     - prod/distronation/firebase-admin-key
-    
+
   Staging Secrets:
     - staging/distronation/database-credentials
     - staging/distronation/youtube-api-keys-test
     - staging/distronation/spotify-credentials-test
-    
+
   Development Secrets:
     - dev/distronation/database-credentials
     - dev/distronation/mock-api-keys
@@ -570,23 +595,24 @@ AWS Secrets Manager:
 ```
 
 #### External API Configuration
+
 ```yaml
 Production APIs:
   YouTube Data API:
     Base URL: https://www.googleapis.com/youtube/v3
     Quota: 10,000 units/day
     Authentication: OAuth 2.0 + API Key
-    
+
   Spotify Web API:
     Base URL: https://api.spotify.com/v1
     Rate Limit: 100 requests/second
     Authentication: Client Credentials
-    
+
 Staging APIs:
   Configuration: Test/sandbox endpoints where available
   Quota: Reduced quotas for cost control
   Authentication: Test credentials
-  
+
 Development APIs:
   Configuration: Mock services or shared test endpoints
   Quota: Minimal quotas
@@ -596,6 +622,7 @@ Development APIs:
 ### 5.2 Feature Flag Management
 
 #### Feature Flag Strategy
+
 ```yaml
 Implementation: Environment-based feature flags
 Storage: AWS Systems Manager Parameter Store
@@ -605,12 +632,12 @@ Production Flags:
   /prod/features/new-upload-flow: false
   /prod/features/enhanced-analytics: true
   /prod/features/beta-api-endpoints: false
-  
+
 Staging Flags:
   /staging/features/new-upload-flow: true
   /staging/features/enhanced-analytics: true
   /staging/features/beta-api-endpoints: true
-  
+
 Development Flags:
   /dev/features/new-upload-flow: true
   /dev/features/enhanced-analytics: true
@@ -622,19 +649,20 @@ Development Flags:
 ### 6.1 Environment-Specific Monitoring
 
 #### Production Monitoring
+
 ```yaml
 CloudWatch Metrics:
   - Lambda function metrics (duration, errors, throttles)
   - API Gateway metrics (latency, 4xx/5xx errors)
   - RDS metrics (CPU, connections, read/write latency)
   - Custom business metrics
-  
+
 Alarms and Notifications:
   - Error rate > 1%: Immediate alert
   - Response time > 3 seconds: Warning alert
   - Database connections > 80%: Warning alert
   - Lambda throttling: Immediate alert
-  
+
 Log Retention:
   - Application logs: 30 days
   - Access logs: 90 days
@@ -642,17 +670,18 @@ Log Retention:
 ```
 
 #### Staging/Development Monitoring
+
 ```yaml
 CloudWatch Metrics:
   - Essential metrics only (cost optimization)
   - Performance testing metrics during load tests
   - Development debugging metrics
-  
+
 Alarms and Notifications:
   - Critical errors only
   - Resource utilization warnings
   - Cost threshold alerts
-  
+
 Log Retention:
   - Application logs: 7 days
   - Access logs: 30 days
@@ -662,19 +691,21 @@ Log Retention:
 ### 6.2 Performance Baselines
 
 #### Production Performance Targets
-| Metric | Target | Measurement | Alert Threshold |
-|--------|--------|-------------|-----------------|
-| **API Response Time** | < 500ms (95th percentile) | CloudWatch | > 1000ms |
-| **Database Query Time** | < 100ms (average) | RDS Performance Insights | > 500ms |
-| **Lambda Cold Start** | < 2 seconds | CloudWatch | > 5 seconds |
-| **Error Rate** | < 0.5% | CloudWatch | > 1% |
-| **Availability** | > 99.9% | Uptime monitoring | < 99.5% |
+
+| Metric                  | Target                    | Measurement              | Alert Threshold |
+| ----------------------- | ------------------------- | ------------------------ | --------------- |
+| **API Response Time**   | < 500ms (95th percentile) | CloudWatch               | > 1000ms        |
+| **Database Query Time** | < 100ms (average)         | RDS Performance Insights | > 500ms         |
+| **Lambda Cold Start**   | < 2 seconds               | CloudWatch               | > 5 seconds     |
+| **Error Rate**          | < 0.5%                    | CloudWatch               | > 1%            |
+| **Availability**        | > 99.9%                   | Uptime monitoring        | < 99.5%         |
 
 ## 7. Cost Management
 
 ### 7.1 Cost Allocation by Environment
 
 #### Production Costs (Estimated Monthly)
+
 ```yaml
 AWS Services:
   Lambda Functions: $200-400
@@ -684,18 +715,19 @@ AWS Services:
   CloudFront: $20-50
   Other Services: $30-100
   Total AWS: $500-1,100
-  
+
 Firebase Services:
   Authentication: $20-50
   Realtime Database: $30-100
   Cloud Storage: $10-30
   Cloud Functions: $10-50
   Total Firebase: $70-230
-  
+
 Total Production: $570-1,330/month
 ```
 
 #### Staging Costs (Estimated Monthly)
+
 ```yaml
 AWS Services: $150-300 (30-40% of production)
 Firebase Services: $20-50 (25-30% of production)
@@ -703,6 +735,7 @@ Total Staging: $170-350/month
 ```
 
 #### Development Costs (Estimated Monthly)
+
 ```yaml
 AWS Services: $50-150 (10-20% of production)
 Firebase Services: $10-30 (15-20% of production)
@@ -712,12 +745,14 @@ Total Development: $60-180/month
 ### 7.2 Cost Optimization Strategies
 
 #### Production Optimizations
+
 - **Reserved Capacity**: Consider reserved concurrency for predictable Lambda workloads
 - **Aurora Serverless**: Optimize min/max ACU based on actual usage patterns
 - **S3 Intelligent Tiering**: Automatic cost optimization for infrequently accessed data
 - **CloudFront**: Optimize cache behaviors and geographic distribution
 
 #### Non-Production Optimizations
+
 - **Spot Instances**: Use spot instances for non-critical workloads
 - **Scheduled Scaling**: Shut down non-production resources during off-hours
 - **Data Lifecycle**: Aggressive cleanup policies for temporary data
@@ -728,19 +763,20 @@ Total Development: $60-180/month
 ### 8.1 Environment-Specific Security Controls
 
 #### Production Security
+
 ```yaml
 Access Controls:
   - MFA required for all human access
   - Service accounts with least privilege
   - No direct database access
   - VPC endpoints for AWS service access
-  
+
 Network Security:
   - Private subnets for all compute resources
   - WAF rules for public endpoints
   - Security groups with minimal required access
   - Network ACLs for additional protection
-  
+
 Data Protection:
   - Encryption at rest for all data stores
   - TLS 1.2+ for all data in transit
@@ -749,19 +785,20 @@ Data Protection:
 ```
 
 #### Development Security
+
 ```yaml
 Access Controls:
   - Relaxed access for development productivity
   - Shared development accounts (where appropriate)
   - Direct database access for debugging
   - Simplified authentication for testing
-  
+
 Network Security:
   - Simplified network configuration
   - More permissive security groups
   - Optional VPC endpoints
   - Basic network protection
-  
+
 Data Protection:
   - Encryption enabled but not enforced
   - Test data only (no production data)
@@ -774,6 +811,7 @@ Data Protection:
 ### 9.1 Maintenance Schedules
 
 #### Production Maintenance
+
 ```yaml
 Scheduled Maintenance:
   Window: Sunday 2:00-4:00 AM EST
@@ -783,7 +821,7 @@ Scheduled Maintenance:
     - Configuration updates
     - Performance optimization
     - Database maintenance
-  
+
 Emergency Maintenance:
   Authorization: Engineering lead + On-call approval
   Notification: 1 hour advance notice (minimum)
@@ -791,12 +829,13 @@ Emergency Maintenance:
 ```
 
 #### Non-Production Maintenance
+
 ```yaml
 Staging Maintenance:
   Window: Any time with team notification
   Frequency: Weekly or as needed
   Activities: Testing new deployments and configurations
-  
+
 Development Maintenance:
   Window: Any time
   Frequency: Daily or as needed
@@ -806,13 +845,14 @@ Development Maintenance:
 ### 9.2 Environment Refresh Procedures
 
 #### Data Refresh Strategy
+
 ```yaml
 Staging Data Refresh:
   Source: Production database (sanitized)
   Frequency: Weekly
   Sanitization: PII removal/masking
   Process: Automated with manual validation
-  
+
 Development Data Refresh:
   Source: Synthetic test data
   Frequency: Daily or on-demand
@@ -825,6 +865,7 @@ Development Data Refresh:
 ### 10.1 Environment-Specific DR Procedures
 
 #### Production Disaster Recovery
+
 ```yaml
 RTO (Recovery Time Objective): 4 hours
 RPO (Recovery Point Objective): 1 hour
@@ -833,9 +874,8 @@ Backup Strategy:
   - S3: Cross-region replication
   - Lambda: Infrastructure as Code redeployment
   - Configuration: Parameter Store backup
-  
-Failover Procedures:
-  1. Assess impact and activate DR team
+
+Failover Procedures: 1. Assess impact and activate DR team
   2. Restore database from latest backup
   3. Redeploy Lambda functions and API Gateway
   4. Update DNS records for traffic routing
@@ -843,6 +883,7 @@ Failover Procedures:
 ```
 
 #### Non-Production Recovery
+
 ```yaml
 RTO: 8-24 hours (best effort)
 RPO: 24 hours
@@ -855,18 +896,21 @@ Process: Simplified recovery process focused on getting environments operational
 ### 11.1 Migration Recommendations
 
 #### Short-term Actions (Month 1)
+
 1. **Environment Audit**: Complete inventory of all environment-specific configurations
 2. **Documentation Update**: Document all missing environment details identified in this document
 3. **Access Management**: Ensure appropriate team access to all environments
 4. **Monitoring Integration**: Integrate monitoring tools with existing environment monitoring
 
 #### Medium-term Actions (Months 2-6)
+
 1. **Standardization**: Align environment configurations with best practices
 2. **Cost Optimization**: Implement cost management practices
 3. **Security Hardening**: Apply security policies across all environments
 4. **Tool Integration**: Integrate with deployment and monitoring tools
 
 #### Long-term Strategy (Months 6-12)
+
 1. **Platform Consolidation**: Evaluate consolidating to single cloud provider
 2. **Multi-region Deployment**: Implement geographic redundancy
 3. **Advanced Automation**: Implement advanced deployment automation
@@ -875,30 +919,23 @@ Process: Simplified recovery process focused on getting environments operational
 ### 11.2 Risk Mitigation
 
 #### Environment Dependencies
+
 - **Cross-environment Communication**: Document and minimize dependencies
 - **Data Consistency**: Ensure data synchronization between environments
 - **Service Dependencies**: Map all inter-service dependencies
 - **External Integrations**: Validate external service configurations per environment
 
 #### Migration Risks
+
 - **Configuration Drift**: Regular configuration validation and correction
 - **Data Loss**: Comprehensive backup and validation procedures
 - **Service Disruption**: Gradual migration with rollback capabilities
 - **Cost Overruns**: Careful cost monitoring during migration
 
 ## Related Documents
+
 - [CI/CD Pipeline Documentation](./ci-cd.md)
 - [Rollback Procedures](./rollback.md)
 - [Configuration Management](./configuration.md)
 - [Security Policies](../security/security-policies.md)
 - [Architecture Documentation](../architecture/unified-architecture.md)
-
----
-
-**Document Version**: 1.0  
-**Last Updated**: July 24, 2025  
-**Next Review**: October 24, 2025  
-**Owner**: Adrian Green, Head of Engineering  
-**Approved By**: Adrian Green, Head of Engineering
-
-*This document contains sensitive infrastructure information. Distribution is restricted to authorized personnel with appropriate access levels.*
