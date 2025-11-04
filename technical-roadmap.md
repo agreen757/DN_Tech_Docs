@@ -164,7 +164,7 @@ Advanced Features:
 Initiative: Outreach YouTube Channel Discovery enablement
 Tag: outreach-youtube-channel-search (Task Master)
 Owner: CRM Engineering – Outreach squad
-Current Progress: 80% complete (8/10 tasks delivered)
+Current Progress: 90% complete (9/10 tasks delivered)
 Target Release: February 2025 beta in Outreach module
 
 Completed Deliverables:
@@ -173,9 +173,9 @@ Completed Deliverables:
   - Search modal, channel detail panel, and results data grid components
   - Outreach page search entry points wired with loading + error telemetry
   - Email extraction helper and numeric formatting utilities for channel metadata
+  - Channel data transformation utility for Firestore persistence alignment
 
 Pending / In Progress:
-  - Task 9: Channel data transformation utility for Firestore persistence alignment
   - Task 10: Playwright end-to-end regression suite for search → selection → add flow
 
 Quality & Testing Strategy:
@@ -189,9 +189,17 @@ Key Dependencies & Risks:
   - Playwright environment setup must complete before CI gating can be enforced
 
 Next Actions:
-  - Finish Task 9 implementation and peer review for schema consistency
   - Land Task 10 Playwright suite and hook into CI stage
+  - Kick off partner channel mention enrichment initiative once Task 10 completes
   - Capture post-beta metrics (channel add rate, duplicate prevention efficacy)
+
+**Partner Channel Mention Initiative (CRM Roadmap Extension)**
+
+- **Objective**: Enrich manual outreach refreshes with partner-channel mention metadata surfaced inside the analytics dashboard.
+- **Integration Points**: Insert partner sourcing ahead of the current YouTube analytics refresh pipeline traced through `src/services/outreach/index.ts` and related components.
+- **Data Source**: Implement a `getDnUsersList` client that calls `{{DN_USERS_LIST_ENDPOINT}}` with the provisioned `x-api-key`, manually inspecting the returned payload to type the `channels` array.
+- **Processing Flow**: Feed the fetched partner channel metadata into the `onRefreshYoutube` workflow, then have the YouTube mention helper aggregate `{ videoId, videoUrl }` matches per channel before persisting them.
+- **Deliverables**: Extend `src/services/outreach/types.ts`, state management, and UI surfaces (notably `YouTubeChannelDetail.tsx`) to store and display partner mentions, backed by unit coverage for the API client, helper logic, and refreshed analytics integration.
 ```
 
 **Current Implementation Status (January 2025)**
