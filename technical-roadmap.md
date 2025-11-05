@@ -538,16 +538,30 @@ Total Current Baseline: $504-664/month
 
 #### Migration Overview
 
-**Strategic Initiative**: Migrate email delivery infrastructure from Mailgun to Amazon SES to achieve cost optimization, deeper AWS integration, and enhanced monitoring capabilities.
+**Strategic Initiative**: Migrate email delivery infrastructure from Mailgun to Amazon SES to achieve cost optimization, eliminate infrastructure complexity, and enhance AWS integration.
+
+**Migration Drivers:**
+
+1. **Cost Avoidance - Network Load Balancer Requirement**: Mailgun has requested implementation of a static external IP for communications, requiring a Network Load Balancer in our infrastructure. This would increase monthly costs by ~50% ($150-180/month additional infrastructure costs) solely for Mailgun compatibility.
+
+2. **Direct Cost Savings**: SES pricing ($0.10/1000 emails) vs. Mailgun ($0.80/1000 emails) delivers 87.5% cost reduction on email sending costs ($70-100/month savings at current volume).
+
+3. **AWS Integration**: Native AWS service eliminates external dependencies and provides seamless integration with existing Lambda, SNS, and DynamoDB infrastructure.
+
+4. **Monitoring and Observability**: Unified AWS monitoring reduces operational complexity and improves incident response capabilities.
 
 **Current Status**: 80% complete - Infrastructure and code ready, pending AWS production approval
 
 ```yaml
 Migration Timeline: November 2025 - December 2025 (2-3 weeks)
-Cost Impact: $70-100/month savings (40-50% reduction in email costs)
+Cost Impact: 
+  - Direct Savings: $70-100/month (email sending costs)
+  - Infrastructure Avoidance: $150-180/month (NLB costs avoided)
+  - Total Benefit: $220-280/month (65-70% total cost reduction)
 Business Impact: Zero user-facing changes (identical email templates maintained)
 Technical Complexity: Medium (AWS infrastructure + Lambda integration)
 Risk Level: Low (sandbox testing complete, rollback capability maintained)
+ROI: Immediate - infrastructure cost avoidance alone justifies migration
 ```
 
 #### Phase 1: Infrastructure Setup (✅ COMPLETED - November 5, 2025)
@@ -578,10 +592,11 @@ Infrastructure as Code:
 
 **Key Technical Decisions:**
 
-1. **Custom Template Processing**: Maintained Mailgun-style {{variable}} replacement instead of SES native templates for consistency and control
-2. **Configuration Sets**: Leveraged SES Configuration Sets for comprehensive event tracking (replaces Mailgun webhooks)
-3. **Tag Format**: Converted array-based tags to SES key=value format for compatibility
-4. **Dual Handler Approach**: Created separate sendTemplateEmailSES.ts handler for parallel testing capability
+1. **Eliminate NLB Dependency**: SES operates entirely within AWS VPC, eliminating need for static external IP and Network Load Balancer ($150-180/month cost avoidance)
+2. **Custom Template Processing**: Maintained Mailgun-style {{variable}} replacement instead of SES native templates for consistency and control
+3. **Configuration Sets**: Leveraged SES Configuration Sets for comprehensive event tracking (replaces Mailgun webhooks)
+4. **Tag Format**: Converted array-based tags to SES key=value format for compatibility
+5. **Dual Handler Approach**: Created separate sendTemplateEmailSES.ts handler for parallel testing capability
 
 #### Phase 2: DNS and Production Access (⏳ IN PROGRESS - November 2025)
 
@@ -611,11 +626,13 @@ Next Actions:
 
 **Production Access Appeal Highlights:**
 
+- **Business Justification**: Migration from established Mailgun service due to infrastructure cost requirements (NLB for static IP adding $150-180/month)
 - Detailed bounce/complaint handling via SNS → Lambda → DynamoDB
 - Comprehensive list hygiene practices and suppression list management
 - Professional email templates with clear branding and opt-out mechanisms
-- Migration from Mailgun (demonstrating established email sending history)
+- Demonstrated email sending history and responsible practices with Mailgun
 - Technical infrastructure showing serious monitoring and compliance capabilities
+- AWS-native architecture reducing operational complexity and costs
 
 #### Phase 3: Testing and Validation (📋 NEXT - December 2025)
 
@@ -723,9 +740,17 @@ Event Tracking Accuracy:
 
 Cost Optimization:
   Baseline (Mailgun): $0.80/1000 emails (~$120/month at current volume)
+  Infrastructure Requirement: Network Load Balancer for static IP ($150-180/month)
+  Total Mailgun Cost: $270-300/month (email + required infrastructure)
+  
   Target (SES): $0.10/1000 emails (~$20-30/month projected)
-  Actual Savings: $70-100/month (40-50% reduction)
-  ROI: 3-4 month payback on migration investment
+  Infrastructure Requirement: None (operates within existing AWS VPC)
+  Total SES Cost: $20-30/month (email only, no additional infrastructure)
+  
+  Total Savings: $240-270/month (80-90% cost reduction)
+  Infrastructure Cost Avoidance: $150-180/month (NLB elimination)
+  Email Cost Savings: $90-100/month (87.5% per-email reduction)
+  ROI: Immediate (cost avoidance alone justifies migration)
 ```
 
 **Business Impact Validation:**
@@ -739,11 +764,14 @@ Zero User Impact:
   ✅ No changes to email content or branding
 
 Operational Benefits:
+  ✅ Infrastructure simplification (eliminates NLB requirement)
+  ✅ Cost avoidance (no static IP infrastructure needed)
   ✅ Deeper AWS integration (unified monitoring)
   ✅ Better cost visibility (AWS Cost Explorer)
   ✅ Enhanced event tracking (SNS real-time events)
   ✅ Improved scalability (SES production limits: 50k+ emails/day)
   ✅ Reduced vendor lock-in (AWS native service)
+  ✅ Simplified architecture (fewer external dependencies)
 
 Risk Mitigation Success:
   ✅ Sandbox testing capability maintained
