@@ -55,12 +55,24 @@
 | financial-addContactHandler | nodejs20.x | Authenticated endpoint to re-subscribe contacts or update topic preferences from the CRM UI. | API Gateway (`/financial/add-contact`) |
 | shared-mailtoUnsubscribeHandler | nodejs20.x | Shared handler packaged under `lambda/shared/unsubscribe` for processing mailto unsubscribes across finance/outreach. | SES → SNS event |
 
+### Key Management (KMS)
+| Alias / Key ID | Purpose | Notes |
+|----------------|---------|-------|
+| alias/dn-unsubscribe | Encrypt/decrypt unsubscribe tokens | Referenced by `UNSUBSCRIBE_KMS_KEY_ID`; enforces token TTL and encryption context for GET/POST unsubscribe flows |
+| alias/dn-core-secrets | Encrypt Secrets Manager payloads | Protects SES credentials, Firebase service accounts, and other shared secrets |
+
 ## Database Resources
 
 ### RDS Aurora
 | Identifier | Class | Engine | Status |
 |------------|-------|--------|--------|
 | database-2-instance-1 | db.serverless | aurora-postgresql | available |
+
+### DynamoDB Tables (Key Tables)
+| Table Name | Purpose | Notes |
+|------------|---------|-------|
+| distronation-audit-unsubscribe | SES unsubscribe audit log | Receives structured events (operation, topic, source IP, token timestamp) from unsubscribe/add-contact/mailto handlers |
+| campaign_tracking | Outreach analytics | Stores outreach campaign stats and feeds CRM dashboards |
 
 ## Storage Resources
 
