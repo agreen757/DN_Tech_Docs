@@ -44,6 +44,17 @@
 | ~~channelbackfill-dev~~ | ~~nodejs18.x~~ | ~~Channel data backfill~~ | **Migrated to ECS** |
 | ~~cmsCustomidCleanup-dev~~ | ~~nodejs18.x~~ | ~~CMS custom ID cleanup~~ | **Migrated to ECS** |
 
+### SES Application Lambda Functions
+| Function | Runtime | Purpose | Primary Trigger |
+|----------|---------|---------|-----------------|
+| outreach-sendTemplateEmailSES | nodejs20.x | Sends branded outreach campaigns through Amazon SES with List-Unsubscribe headers, encrypted unsubscribe links, and contact verification. | API Gateway (`/outreach/send-template-email-ses`) |
+| outreach-unsubscribeHandler | nodejs20.x | Handles GET/POST unsubscribe flows, decrypts tokens, and redirects users to CRM confirmation UI. | API Gateway (`/outreach/unsubscribe`) |
+| outreach-mailtoUnsubscribeHandler | nodejs20.x | Processes inbound “unsubscribe” emails captured by SES inbound rules, infers topics, and updates contact preferences. | SES → SNS event |
+| financial-sendFinancialReportSES | nodejs20.x | Generates and emails financial statements via SES, replacing Mailgun attachments with CloudFront links. | API Gateway (`/financial/send-report`) |
+| financial-unsubscribeHandler | nodejs20.x | Mirrors outreach unsubscribe functionality for finance email streams. | API Gateway (`/financial/unsubscribe`) |
+| financial-addContactHandler | nodejs20.x | Authenticated endpoint to re-subscribe contacts or update topic preferences from the CRM UI. | API Gateway (`/financial/add-contact`) |
+| shared-mailtoUnsubscribeHandler | nodejs20.x | Shared handler packaged under `lambda/shared/unsubscribe` for processing mailto unsubscribes across finance/outreach. | SES → SNS event |
+
 ## Database Resources
 
 ### RDS Aurora
@@ -81,10 +92,12 @@
 | E1IK0N6Y8U0JE2 | d3ejyccyhy7cv7.cloudfront.net | Deployed |
 
 ### API Gateway
-| API Name | ID | Created |
-|----------|----|---------| 
-| dn-api | <API_GATEWAY_ID_2> | 2024-02-08 |
-| distronationfmGeneralAccess | <API_GATEWAY_ID_1> | 2024-06-14 |
+| API Name | ID | Created | Notes |
+|----------|----|---------|-------|
+| dn-api | <API_GATEWAY_ID_2> | 2024-02-08 | Core CRM + legacy endpoints |
+| distronationfmGeneralAccess | <API_GATEWAY_ID_1> | 2024-06-14 | General access API for DistroFM |
+| outreach-api | <OUTREACH_API_GATEWAY_ID> | 2025-11-05 | Hosts SES outreach routes: `/outreach/send-template-email-ses`, `/outreach/unsubscribe`, `/outreach/add-contact`, `/outreach/tracking-data`, `/outreach/webhook` |
+| financial-reports-api | <FINANCIAL_API_GATEWAY_ID> | 2025-11-05 | Hosts SES finance routes: `/financial/send-report`, `/financial/unsubscribe`, `/financial/add-contact`, `/financial/tracking-data` |
 
 ### Route53 Hosted Zones
 | Zone | ID |
