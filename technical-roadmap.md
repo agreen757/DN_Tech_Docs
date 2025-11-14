@@ -1,5 +1,7 @@
 # Technical Roadmap: System Consolidation Timeline and Migration Strategies
 
+**Last Updated:** November 14, 2025
+
 ## Executive Summary
 
 This Technical Roadmap provides a comprehensive implementation plan for consolidating and optimizing Distro Nation's infrastructure, including system consolidation timelines, migration strategies, and optimization roadmaps. The plan consolidates insights from complete technical documentation, cost analysis, and security assessments to deliver a unified approach to technical modernization.
@@ -148,13 +150,14 @@ Advanced Features:
 **Integration Points**
 
 - **dn-api Integration**: ✅ Secure API key authentication for `/dn_users_list` and `/send-mail` endpoints
-- **Email Service Integration**: ✅ Migration from Mailgun to Amazon SES (98% complete - November 6, 2025)
+- **Email Service Integration**: ✅ Migration from Mailgun to Amazon SES (98% complete – updated November 14, 2025; unsubscribe infrastructure live, cutover pending)
   - ✅ Amazon SES integration with Configuration Sets and SNS event tracking
   - ✅ Identical email templates maintained (zero visual impact to recipients)
   - ✅ Lambda function deployed and tested (outreach-sendTemplateEmailSES)
   - ✅ API Gateway endpoint live with Firebase authentication
   - ✅ Sandbox testing completed successfully (test email sent and received)
   - ✅ Bug fixes completed: tag format, CORS, header handling
+  - ✅ SES unsubscribe stack delivered: contact list automation, encrypted URLs, GET/POST endpoints, and CRM confirmation UI (Nov 14, 2025)
   - ✅ Production access approved by AWS (Case ID: <AWS_CASE_ID>)
   - 📋 Cost optimization: $240-270/month savings projected vs. Mailgun
   - 📋 Mailgun deprecation scheduled post-SES production validation
@@ -212,7 +215,7 @@ Next Actions:
 - **Deliverables**: Extend `src/services/outreach/types.ts`, state management, and UI surfaces (notably `YouTubeChannelDetail.tsx`) to store and display partner mentions, backed by unit coverage for the API client, helper logic, and refreshed analytics integration.
 ```
 
-**Current Implementation Status (November 2025)**
+**Current Implementation Status (Updated November 14, 2025)**
 
 ```yaml
 ✅ COMPLETED Features:
@@ -223,11 +226,12 @@ Next Actions:
   - Authentication security audit (50/114 security tests implemented)
   - API key authentication for dn-api integration
   - Enhanced error handling and monitoring
+  - Amazon SES unsubscribe infrastructure (contact list, encrypted tokens, CRM confirmation UI) – Task Master tag `email_unsubscribe_feature` complete 11/11 deliverables
   - Amazon SES infrastructure setup (configuration sets, SNS tracking, domain verification)
   - Email service provider migration from Mailgun to Amazon SES (code ready for deployment)
 
 🔄 IN PROGRESS (Current Development Focus - November 2025):
-  - Email Service Migration to Amazon SES (98% complete - November 6, 2025):
+  - Email Service Migration to Amazon SES (98% complete – updated November 14, 2025; unsubscribe stack live, production cutover pending):
     ✅ Infrastructure: Domain identity, configuration sets, SNS event tracking
     ✅ Code Implementation: SES Lambda handler and utility modules deployed
     ✅ Email Templates: Identical HTML templates maintained (brand consistency)
@@ -239,6 +243,7 @@ Next Actions:
     ✅ Bug Fixes: Tag format, CORS, header handling all resolved
     ✅ Production Access: Approved by AWS (Case ID: <AWS_CASE_ID>)
     ✅ Production Deployment: Cutover plan active with SES ramp schedule
+    ✅ Unsubscribe Experience: Shared contact list, encrypted tokens, GET/POST endpoints, and CRM confirmation UI launched Nov 14, 2025
 
   - Outreach system infrastructure deployment (4/10 tasks complete, 40% progress)
   - Advanced outreach system implementation (9/11 tasks complete, 90% progress)
@@ -774,6 +779,15 @@ Performance Observations:
    - Lambda-based CORS (AWS_PROXY) requires proper header handling
    - OPTIONS method must return 200 with CORS headers
    - API Gateway deployment required for CORS changes to take effect
+
+#### Unsubscribe Feature Readiness (✅ COMPLETED - November 14, 2025)
+
+- **Task Master Completion**: Tag `email_unsubscribe_feature` now reports 11/11 tasks delivered (contact list infrastructure, Lambda handlers, utilities, build scripts, and CRM UI), officially closing the unsubscribe workstream.
+- **Infrastructure**: Terraform provisions the shared SES contact list, DynamoDB audit table, and `alias/dn-unsubscribe` KMS key plus the reusable `unsubscribe-utils-layer` so finance and outreach stacks share the same encryption/auth/audit helpers.
+- **API & Handlers**: `/financial/unsubscribe` and `/outreach/unsubscribe` support GET (redirect to `UNSUBSCRIBE_CONFIRMATION_URL` with `email`/`topic`) and POST (List-Unsubscribe=One-Click) flows via `lambda/shared/unsubscribe/src/handlers/unsubscribeHandler.ts`; `/financial/add-contact` exposes the authenticated resubscribe endpoint, while `mailtoUnsubscribeHandler` processes inbound "unsubscribe" emails automatically.
+- **Email Senders**: `lambda/finance/src/utils/ses.ts` and `lambda/outreach/src/utils/ses.ts` gate sends on contact status, auto-provision contacts, attach dual `List-Unsubscribe` headers (mailto + HTTPS), append branded HTML/text footers, and set `ListManagementOptions` so Gmail renders native unsubscribe controls.
+- **CRM Experience**: `src/pages/UnsubscribeConfirmation.tsx` displays confirmation details and calls `resubscribeContact()` (`src/services/subscriptionService.ts`), which posts to the add-contact endpoint defined via `REACT_APP_OUTREACH_ADD_CONTACT_PATH`; the page also links to `managePreferencesUrl` for broader preference management.
+- **Auditability**: Every add/remove/unsubscribe path writes structured entries to the DynamoDB audit table, and CloudWatch log groups for `outreach-unsubscribeHandler`, `financial-unsubscribeHandler`, and `financial-addContactHandler` include token timestamps/IP metadata for compliance.
 
 #### Phase 4: Production Deployment (🔄 IN PROGRESS - November 2025)
 
@@ -2468,7 +2482,7 @@ The Technical Roadmap provides a comprehensive, risk-mitigated path to successfu
 ---
 
 **Document Version**: 1.1  
-**Roadmap Date**: October 3, 2025  
+**Roadmap Date**: November 14, 2025  
 **Implementation Start**: Recommended within 30 days  
 **Completion Target**: January 24, 2027 (18 months)  
 **Prepared By**: Adrian Green, Head of Engineering

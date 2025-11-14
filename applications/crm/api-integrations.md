@@ -15,6 +15,15 @@ The Distro Nation CRM integrates with multiple APIs to provide comprehensive fun
 - ✅ **Global CDN performance** (CloudFront edge locations)
 - ✅ **Smaller email size** (links instead of attachments)
 
+### SES Unsubscribe Infrastructure (November 14, 2025)
+**Status**: 100% complete (Task Master tag `email_unsubscribe_feature`, 11/11 deliverables shipped across infrastructure, Lambdas, and UI)
+
+- ✅ Terraform now provisions the shared SES contact list, DynamoDB audit log, and dedicated KMS alias powering encrypted unsubscribe tokens.
+- ✅ Shared Lambda layer `unsubscribe-utils-layer` exposes contact list utilities, encryption helpers, and Firebase-authenticated handlers for both finance and outreach stacks.
+- ✅ `/outreach/unsubscribe`, `/financial/unsubscribe`, and `/financial/add-contact` endpoints are live with GET (302 → CRM UI) and POST (List-Unsubscribe=One-Click) flows plus mailto/SNS ingestion.
+- ✅ Outreach and Finance SES senders automatically gate sends on contact status, attach dual `List-Unsubscribe` headers, and append branded unsubscribe footer + text copy.
+- ✅ CRM now includes `/unsubscribe` confirmation + resubscribe UI that calls the add-contact API for reinstatement and preference management.
+
 ## AWS API Gateway Integration
 
 ### dn-api Core Integration
@@ -1011,6 +1020,46 @@ configparser>=5.3.0
 ```
 
 **Lambda Layer**: Python 3.12 compatible `cryptography` layer (~5.4MB)
+
+## Amazon SES Unsubscribe Feature
+
+### Task Master Snapshot (email_unsubscribe_feature)
+- **Status**: 11/11 tasks completed as of November 14, 2025 (contact list infra, encryption utilities, handlers, UI, and build tooling)
+- **Scope Covered**:
+  1. Terraform assets for SES contact lists, DynamoDB audit tables, and `alias/dn-unsubscribe` KMS key (Tasks 1-4, 11)
+  2. Lambda handlers for GET/POST unsubscribe flows, mailto ingestion, and authenticated contact management (Tasks 5-7)
+  3. SES sending utilities updated for outreach + finance stacks (Tasks 8-9)
+  4. React unsubscribe confirmation experience with resubscribe action (Task 10)
+
+### Shared Infrastructure & Libraries
+- **Contact List + Audit Stack**: `terraform/outreach/main.tf` and `terraform/financial/main.tf` now provision the shared SES contact list (`var.unsubscribe_contact_list_name`), DynamoDB audit table (`var.unsubscribe_audit_table_name`), and IAM policies so every Lambda can log structured events.
+- **KMS-backed Tokens**: `lambda/shared/unsubscribe/src/utils/encryption.ts` encrypts `{ email, topic, timestamp }` payloads using the configured KMS alias. Tokens expire after `UNSUBSCRIBE_TOKEN_MAX_AGE_DAYS` (default 30) and are embedded via the `data` query parameter.
+- **Shared Lambda Layer**: The `unsubscribe-utils-layer` bundles contact list helpers, encryption logic, Firebase admin bootstrap, and auditing helpers so finance/outreach senders and handlers all import `@distronation/unsubscribe-utils`.
+- **Configurable URLs**: `UNSUBSCRIBE_BASE_URL`/`UNSUBSCRIBE_CONFIRMATION_URL` control where GET requests redirect, while `UNSUBSCRIBE_TOKEN_MAX_AGE_DAYS`, `UNSUBSCRIBE_KMS_KEY_ID`, and `SES_CONTACT_LIST_NAME` tune expiry, encryption, and targeting without code changes.
+
+### API Surface & Flows
+| API Gateway Route | Method(s) | Handler | Purpose / Notes |
+| --- | --- | --- | --- |
+| `/financial/unsubscribe` | GET, POST | `lambda/shared/unsubscribe/src/handlers/unsubscribeHandler.ts` | GET decrypts the token and 302-redirects to the CRM confirmation page with `email`/`topic` query params; POST serves List-Unsubscribe=One-Click flows and returns 200 with strict headers. |
+| `/outreach/unsubscribe` | GET, POST | Same handler as above | Mirrors the finance route for outreach mail streams; both stages share the same KMS + contact list configuration through Terraform locals. |
+| `/financial/add-contact` (exposed to CRM via `REACT_APP_OUTREACH_ADD_CONTACT_PATH`) | POST | `lambda/shared/unsubscribe/src/handlers/addContactHandler.ts` | Firebase-authenticated endpoint that re-subscribes contacts, accepts optional topic overrides, and writes audit entries; CRM’s `resubscribeContact` service targets this path. |
+| SES → SNS → Lambda | Event | `lambda/shared/unsubscribe/src/handlers/mailtoUnsubscribeHandler.ts` | Processes inbound “unsubscribe” emails caught by SES mail rules, infers topics from the subject/body, unsubscribes via the contact utility, and logs DynamoDB audit rows. |
+
+### Email Sending Integration
+- `lambda/outreach/src/utils/ses.ts` and `lambda/finance/src/utils/ses.ts` now call `ensureRecipientSubscription()` (wrapping `getContact`) before every send, short-circuiting deliveries for `unsubscribeAll` or OPT_OUT contacts and auto-creating missing contacts with default topic preferences.
+- Each send generates a per-recipient unsubscribe URL (`generateUnsubscribeUrl`) plus a mailto fallback, injects HTML + plaintext footers, and attaches dual headers: `List-Unsubscribe` with both mailto/https links and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
+- `ListManagementOptions` are set whenever `SES_CONTACT_LIST_NAME` is available so Gmail renders native “Unsubscribe” affordances and updates feed back into the contact list automatically.
+- Tags are sanitized to SES requirements and include `recipient_<email>` to keep event correlation intact without exposing PII in headers.
+
+### CRM UI & Resubscribe Workflow
+- **Unsubscribe Confirmation Page**: `src/pages/UnsubscribeConfirmation.tsx` reads the encrypted token output (email/topic), renders confirmation messaging, and allows users to request re-subscription with a single click.
+- **Resubscribe Service**: `src/services/subscriptionService.ts` posts to `outreachApiConfig.addContactPath` (overrideable via `REACT_APP_OUTREACH_ADD_CONTACT_PATH`) and pipes success/failure messaging back into the UI. It shares the same payload shape required by `addContactHandler`.
+- **Preference Links**: `outreachApiConfig.managePreferencesUrl` determines whether the CTA routes internally (React Router) or externally for full preference management.
+
+### Auditability & Compliance
+- Every add/remove/update/unsubscribe operation emits a structured record to the DynamoDB audit table via `logAuditEvent`/`logAuditFailure`, capturing request IDs, IPs, and opt-out topics for compliance.
+- `mailtoUnsubscribeHandler` stores detection metadata (subject, inferred topics, detection reason) so support can trace automated unsubscribes triggered by free-form emails.
+- CloudWatch log groups for `outreach-unsubscribeHandler`, `financial-unsubscribeHandler`, and `financial-addContactHandler` now include request IDs, token timestamps, and encrypted contact info for debugging without exposing raw payloads.
 
 ## AWS S3 SDK Direct Integration (NEW)
 
