@@ -105,7 +105,7 @@ App (Root)
 1. User navigates to MailerTemplate component (Email Template tab)
 2. Component fetches user list from dn-api (`/dn_users_list`)
 3. User creates email content using React Quill editor
-4. Campaign data submitted to dn-api (`/send-mail`) endpoint
+4. Campaign data submitted to financial-reports-api (`/send-report`) endpoint
 5. Email sent via Mailgun integration
 6. Campaign tracking logged for analytics
 
