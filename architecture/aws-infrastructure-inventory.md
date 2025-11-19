@@ -25,6 +25,8 @@
 |----------------|----------|-----|--------|---------|
 | channelbackfill-task | 2 | 2048 | 4096 | Channel data backfill processing |
 | cmscustomidcleanup-task | 2 | 4096 | 8192 | YouTube CMS custom ID cleanup |
+| dn-task-claims-report-process | 8 | 256 | 512 | Processes YouTube claims reports, updates Aurora, emails diff results |
+| dn-payout-audit | 10 | 256 | 512 | Runs monthly payout audits (ARM64 Fargate) against Korrect + YouTube data |
 
 ### Container Registry (ECR)
 | Repository Name | URI | Purpose |
