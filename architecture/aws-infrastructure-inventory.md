@@ -12,7 +12,6 @@
 | i-03e7077c18246e75b | t2.micro | stopped | dn-ec2-ddb-instance | Database operations |
 | i-090b84df011c67d5e | t2.micro | stopped | dn-ec2-priv-main | Private main server |
 | i-090dc75e90525eb5e | t2.micro | stopped | vpn | VPN server |
-| i-0063537094eb961dd | t3.micro | **running** | Shazampy-env | Active environment |
 
 ### ECS Clusters
 | Cluster Name | ARN | Status | Platform | Purpose |
