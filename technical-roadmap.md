@@ -150,15 +150,18 @@ Advanced Features:
 **Integration Points**
 
 - **dn-api Integration**: ✅ Secure API key authentication for `/dn_users_list` and `/send-mail` endpoints
-- **Email Service Integration**: ✅ Migration from Mailgun to Amazon SES (98% complete – updated November 14, 2025; unsubscribe infrastructure live, cutover pending)
+- **Email Service Integration**: ✅ Migration from Mailgun to Amazon SES (99% complete – updated December 3, 2025; engagement tracking enabled, production cutover pending)
   - ✅ Amazon SES integration with Configuration Sets and SNS event tracking
   - ✅ Identical email templates maintained (zero visual impact to recipients)
-  - ✅ Lambda function deployed and tested (outreach-sendTemplateEmailSES)
+  - ✅ Lambda function deployed and tested (outreach-sendTemplateEmailSES & financial-sendFinancialReportSES)
   - ✅ API Gateway endpoint live with Firebase authentication
   - ✅ Sandbox testing completed successfully (test email sent and received)
   - ✅ Bug fixes completed: tag format, CORS, header handling
   - ✅ SES unsubscribe stack delivered: contact list automation, encrypted URLs, GET/POST endpoints, and CRM confirmation UI (Nov 14, 2025)
   - ✅ Production access approved by AWS (Case ID: <AWS_CASE_ID>)
+  - ✅ Click/Open Tracking: Event destinations configured for both financial-reports and outreach-tracking configuration sets (Dec 3, 2025)
+  - ✅ Frontend Auto-Link: Plain URL auto-conversion to HTML anchor tags implemented in CRM outreach editor (Dec 3, 2025)
+  - ✅ Secrets Manager: Unified configuration structure with separate config sets (financialConfigurationSet/outreachConfigurationSet)
   - 📋 Cost optimization: $240-270/month savings projected vs. Mailgun
   - 📋 Mailgun deprecation scheduled post-SES production validation
 - **Third-party APIs**: OpenAI, YouTube, Spotify, and SimilarWeb integrations
