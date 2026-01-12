@@ -731,6 +731,205 @@ interface S3ServiceMethods {
 - Credential security with AWS Cognito
 - Error message sanitization
 
+## What's New Modal Module (`/components/` & `/contexts/`)
+
+### WhatsNewModal.tsx
+**Purpose**: Main modal component for displaying feature release information
+**Location**: `src/components/WhatsNewModal.tsx`
+**Props**: 
+```typescript
+interface WhatsNewModalProps {
+  open: boolean;              // Whether the modal is visible
+  onClose: () => void;        // Callback when modal is closed
+  featureConfig: FeatureConfig; // Feature configuration with release info
+}
+```
+**Dependencies**:
+- Material-UI Dialog, Button, Typography, Stack, Grow
+- FeatureItem component
+- modalStyles utilities
+
+**Key Features**:
+- Responsive Material-UI Dialog with adaptive sizing
+- Smooth Grow transition animation (300ms enter, 200ms exit)
+- Full keyboard navigation support (Escape to close, Tab navigation)
+- Screen reader announcements via live region
+- Semantic HTML with proper ARIA attributes
+- Focus trap within dialog (native MUI behavior)
+- Mobile-friendly sheet appearance on small screens
+- Staggered animations for feature items
+- Color contrast and accessibility compliance
+- Respects prefers-reduced-motion media query
+
+**Dialog Structure**:
+- **Title Section**: Feature title, version, and release date with close button
+- **Content Section**: Scrollable stack of FeatureItem components
+- **Actions Section**: "Got It" button to dismiss modal
+
+### FeatureItem.tsx
+**Purpose**: Individual feature item component with icon, title, and description
+**Location**: `src/components/FeatureItem.tsx`
+**Props**:
+```typescript
+interface FeatureItemProps {
+  feature: Feature;    // Feature object with id, title, description, icon
+  index: number;       // Index for staggered animation timing
+}
+```
+**Dependencies**:
+- Material-UI Box, Stack, Typography, Avatar
+- Dynamic Material-UI icon imports
+
+**Features**:
+- Icon rendering using Material-UI icon library
+- Responsive layout with mobile-optimized spacing
+- Staggered entrance animation based on index position
+- Text truncation and wrapping for long descriptions
+- Avatar container for feature icon display
+
+### WhatsNewProvider.tsx
+**Purpose**: React Context provider managing What's New modal state and lifecycle
+**Location**: `src/contexts/WhatsNewProvider.tsx`
+**Props**:
+- `children`: React components to wrap
+
+**Provides via Context**:
+```typescript
+interface WhatsNewContextValue {
+  open: boolean;                  // Modal visibility state
+  setOpen: (open: boolean) => void; // Control modal visibility
+  featureConfig: FeatureConfig;   // Current feature configuration
+  dismissModal: () => void;       // Dismiss modal and persist state
+}
+```
+
+**Dependencies**:
+- React Context API
+- whatsNewService for localStorage operations
+- featureConfigLoader for loading feature configuration
+- React Router for route change detection
+- Theme utilities
+
+**Key Features**:
+- Initializes modal visibility based on feature version and dismissal history
+- Loads feature configuration from features-config.json
+- Tracks route changes and auto-closes modal on navigation
+- Handles dismissal state persistence via whatsNewService
+- Manages context lifecycle with useEffect cleanup
+- Provides uniform context values to all child components
+
+**Initialization Flow**:
+1. Load features-config.json
+2. Check current feature version
+3. Determine if modal should be shown (using whatsNewService.shouldShowModal())
+4. Set initial visibility state
+5. Provide context to children
+
+### whatsNewService.ts
+**Purpose**: localStorage persistence layer for modal dismissal tracking
+**Location**: `src/services/whatsNewService.ts`
+**Functions**:
+- `shouldShowModal(): boolean` - Determine if modal should be shown
+- `markModalAsDismissed(version: string): void` - Persist dismissal state
+- `hasUserDismissedModal(version: string): boolean` - Check dismissal state
+- `getCurrentFeatureVersion(): string` - Get current feature version
+- `getModalDismissedKey(version: string): string` - Generate localStorage key
+- `isNewVersionAvailable(current: string, lastSeen: string | null): boolean` - Check for version update
+- `getLastSeenVersion(): string | null` - Get highest previously seen version
+- `clearVersionCache(): void` - Clear version cache (testing)
+
+**localStorage Keys Pattern**:
+- Format: `whats_new_modal_dismissed_v{VERSION}`
+- Example: `whats_new_modal_dismissed_v1.0.0`
+
+**Error Handling**:
+- Private browsing mode: Logs warning, continues without persistence
+- Quota exceeded: Logs warning, continues without persistence
+- Security errors: Logs warning, continues without persistence
+- All errors logged to console but application continues
+
+**Features**:
+- Version caching to optimize repeated lookups
+- Semantic version comparison (MAJOR.MINOR.PATCH)
+- Graceful fallback to safe defaults on errors
+- localStorage availability checks before operations
+- Comprehensive error logging without throwing exceptions
+
+### featureConfig.ts (Types)
+**Purpose**: TypeScript type definitions for feature configuration
+**Location**: `src/types/featureConfig.ts`
+
+**Exported Types**:
+```typescript
+interface Feature {
+  id: string;           // Unique feature identifier
+  title: string;        // Feature name/title
+  description: string;  // Feature description
+  icon: string;         // Material-UI icon name
+}
+
+interface FeatureConfig {
+  title: string;        // Modal title (e.g., "What's New")
+  version: string;      // Feature version (e.g., "1.0.0")
+  releaseDate: string;  // ISO 8601 date string
+  features: Feature[];  // Array of Feature objects
+}
+```
+
+### features-config.json
+**Purpose**: Feature release configuration data
+**Location**: `src/data/features-config.json`
+**Format**: JSON with structured feature information
+
+**Structure**:
+```json
+{
+  "title": "What's New in Payouts Mailer",
+  "version": "1.0.0",
+  "releaseDate": "2024-01-12T00:00:00Z",
+  "features": [
+    {
+      "id": "feature-1",
+      "title": "Feature Title",
+      "description": "Description of feature",
+      "icon": "StarIcon"
+    }
+  ]
+}
+```
+
+### modalStyles.ts
+**Purpose**: Centralized styling configuration for modal components
+**Location**: `src/utils/modalStyles.ts`
+**Exports**: Style objects for:
+- `dialog` - Dialog container styles
+- `mobileSheet` - Mobile-optimized sheet styles
+- `dialogTitle` - Title section styles
+- `dialogContent` - Content section styles
+- `dialogActions` - Actions section styles
+
+**Features**:
+- Responsive spacing and sizing
+- Theme-aware color usage
+- Mobile-first design approach
+- Consistent animation and transitions
+
+### featureConfigLoader.ts
+**Purpose**: Utility for loading and parsing feature configuration files
+**Location**: `src/utils/featureConfigLoader.ts`
+**Functions**:
+- `loadFeatureConfig(): Promise<FeatureConfig>` - Load features-config.json
+- Error handling for missing or invalid configuration files
+
+**Dependencies**:
+- Fetch API for loading JSON files
+- TypeScript types for configuration objects
+
+**Error Handling**:
+- Network errors: Logs and returns empty configuration
+- Parse errors: Logs and returns empty configuration
+- Missing file: Logs and returns empty configuration
+
 ## Utility Components
 
 ### Context Providers
