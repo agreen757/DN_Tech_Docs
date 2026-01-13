@@ -95,6 +95,26 @@ Advanced Features:
     - Real-time tracking dashboard with auto-refresh and correlation system
     - Error handling with retry mechanisms and fallback strategies
 
+  Lifetime Metrics Separation: ✅ COMPLETED (January 13, 2026) - Mailer vs Outreach Analytics
+    - Issue: Dashboard displayed identical metrics for both Mailer and Outreach systems
+    - Root Cause: Both components queried the same outreach data source
+    - Resolution: Created dedicated useFinancialLifetimeMetrics hook for Mailer system
+    - Frontend Changes: Updated MailerLifetimeMetrics.tsx to use financial-specific API endpoint
+    - Data Source Separation:
+      * Mailer: Queries /financial/tracking-data API endpoint
+      * Outreach: Continues to query /outreach/tracking-data-ses endpoint
+      * DynamoDB Tables: financial-campaign-tracking and outreach-campaign-tracking (separate)
+    - Implementation Details:
+      * Month-year based querying (Lambda API contract)
+      * 4-month lookback for 90-day TTL coverage
+      * Message deduplication by ID to prevent double-counting
+      * SES engagement event aggregation (DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT)
+      * React Query caching with 5-minute auto-refetch
+    - Status Notes:
+      * Frontend implementation: ✅ Complete
+      * API integration: ✅ Complete
+      * Backend engagement tracking: ⚠️ Infrastructure issue identified (see Known Issues)
+
   Outreach System Architecture:
     Backend Infrastructure:
       Lambda Functions: 5 specialized serverless functions with TypeScript
@@ -2647,6 +2667,46 @@ The comprehensive 18-month Technical Roadmap for system consolidation and migrat
 - **Serverless-First Innovation**: Cutting-edge serverless technology adoption
 - **AI/ML Integration**: Advanced analytics and intelligent automation
 - **Industry Leadership**: Technology leadership in music distribution industry
+
+### Known Issues and Tracking
+
+#### Critical Infrastructure Issues
+
+**1. SES Engagement Event Processing (Identified: January 13, 2026)**
+
+**Status**: Blocking metrics aggregation for financial email analytics
+
+**Description**: 
+- Financial emails are sent successfully (564+ records in DynamoDB)
+- SES engagement events (DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT) are not being recorded
+- All lifetime metrics display as 0% due to missing engagement data
+
+**Technical Details**:
+- Send Handler: ✅ Working - emails sent to SES successfully
+- SNS Topic: ✅ Configured - SES publishes events to topic
+- Lambda Event Processor: ❌ Failing - processor crashes on invocation
+- Data Storage: ❌ Not reached - no engagement events recorded in DynamoDB
+
+**Impact**:
+- MailerLifetimeMetrics component displays zero engagement rates
+- Dashboard cannot show delivery, open, or click analytics
+- Campaign performance analysis unavailable for financial reports
+
+**Related Documentation**:
+- Frontend hook: `src/hooks/useFinancialLifetimeMetrics.ts`
+- Component: `src/pages/dashboard/MailerLifetimeMetrics.tsx`
+- API: `/financial/tracking-data` endpoint
+- DynamoDB: `financial-campaign-tracking` table
+
+**Resolution Authority**: Backend Infrastructure / DevOps team
+
+#### Known Limitations
+
+1. **Data Retention**: DynamoDB TTL = 90 days, older campaigns have no accessible metrics
+2. **Query Pagination**: Frontend currently limited to 500 most recent records per month
+3. **Real-time Lag**: React Query 5-minute cache means metrics lag actual engagement events
+4. **Month-based Querying**: API requires month-year parameters, not arbitrary date ranges
+5. **Backend Dependency**: Complete financial metrics require functional event processor
 
 ### Final Recommendations
 
