@@ -47,6 +47,65 @@ The application requires the following environment variables:
    MAILGUN_API_KEY: [mailgun-api-key]  # Only if EMAIL_PROVIDER=mailgun
    SNS_TOPIC_ARN: [optional sns topic arn]  # Publishes send failures for alerting
 
+AWS Secrets Manager Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The application retrieves YouTube API credentials and configuration from AWS Secrets Manager:
+
+- **distronation/lambda-auth-key**: Authorization token for API Gateway
+- **distronation/apigateway-key**: API Gateway URL and x-api-key
+- **distronation/youtube-api**: YouTube content owner ID
+- **distronation/youtube-reporting-job**: YouTube Reporting API job ID
+
+YouTube Reporting Job Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The system uses the YouTube Reporting API to download asset claims data. The job configuration is stored in AWS Secrets Manager under ``distronation/youtube-reporting-job``.
+
+**Current Job Details:**
+
+- **Report Type**: ``content_owner_asset_basic_a3`` (Asset user activity)
+- **Job Created**: February 2026
+- **Data Format**: CSV with asset metadata including custom_id, ISRC, UPC, artist, title, label information
+
+**Important Notes:**
+
+- Reports are generated daily by YouTube, typically available within 24-48 hours after job creation
+- The job ID must be updated in Secrets Manager if a new job is created
+- If no reports are available for the requested date range, the API returns an empty response ``{}``
+- The legacy ``content_owner_asset_a2`` report type has been deprecated by YouTube and replaced with ``content_owner_asset_basic_a3``
+
+**Troubleshooting Report Download Issues:**
+
+If the download script fails with ``KeyError: 'reports'``:
+
+1. Verify the job ID in Secrets Manager matches an active YouTube Reporting job
+2. Check that reports exist for the job using the YouTube Reporting API
+3. Ensure the date parameter is recent enough to have available reports
+4. For new jobs, allow 24-48 hours for the first report to be generated
+
+**Creating a New YouTube Reporting Job:**
+
+If the current job becomes inactive or needs to be recreated:
+
+.. code-block:: python
+
+   # List available report types
+   GET https://youtubereporting.googleapis.com/v1/reportTypes?onBehalfOfContentOwner={content_owner_id}
+   
+   # Create new job
+   POST https://youtubereporting.googleapis.com/v1/jobs
+   {
+     "reportTypeId": "content_owner_asset_basic_a3",
+     "name": "Claims Report - Asset Basic A3"
+   }
+   
+   # Update Secrets Manager with new job ID
+   aws secretsmanager update-secret \
+     --secret-id distronation/youtube-reporting-job \
+     --secret-string '{"job_id":"<new-job-id>"}' \
+     --region us-east-1
+
 Deployment
 ---------
 
