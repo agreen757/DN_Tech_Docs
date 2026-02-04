@@ -611,9 +611,127 @@ Key Features:
 
 **Migration Considerations**
 
-- **Database Migration**: PostgreSQL → Aurora PostgreSQL with minimal downtime
+🚀 **AWS App Runner Migration - IN PLANNING (Q1 2026)**
+
+**Strategic Initiative**: Migrate YouTube CMS Metadata Tool (Catalog Tool) from current hosting to AWS App Runner with automated cost optimization
+
+**Current Status**: Comprehensive migration plan completed, task breakdown finalized (20 tasks, 65 subtasks)
+- **Planning Complete**: ✅ PRD created (February 4, 2026)
+- **Task Analysis**: ✅ Complexity assessment complete (2 high, 14 medium, 4 low complexity tasks)
+- **Cost Analysis**: ✅ Target monthly cost: ~$66/month with automated pause scheduling
+- **Implementation Start**: 📋 Q1 2026 (3-week timeline)
+
+**Migration Architecture**:
+```yaml
+Target Deployment: AWS App Runner (Containerized Flask Application)
+  Container Source: Amazon ECR (Elastic Container Registry)
+  Instance Configuration: 1 vCPU, 2 GB RAM
+  Auto-scaling: 1-2 instances based on traffic
+  Health Check: /health endpoint with 5-second intervals
+  
+Database: AWS RDS PostgreSQL
+  Instance Type: db.t3.micro (expandable)
+  Storage: 20 GB GP3 with automated backups
+  Network: Private subnet with VPC connector from App Runner
+  Backup Retention: 7 days automated snapshots
+
+Cost Optimization: Automated Pause/Resume Schedule
+  Pause Time: 2:00 AM EST daily (off-hours)
+  Resume Time: 6:00 AM EST daily (business hours start)
+  Mechanism: EventBridge rules → Lambda function → App Runner API
+  Monthly Savings: ~$8/month vs. 24/7 operation
+  Annual Savings: ~$96/year from intelligent scheduling
+
+Networking & Security:
+  VPC Connector: Secure private communication with RDS
+  Security Groups: Restrictive inbound/outbound rules
+  Secrets Manager: All credentials stored securely
+  IAM Roles: Least-privilege access for App Runner and Lambda
+
+Monitoring & Operations:
+  CloudWatch Metrics: CPU, memory, request count, HTTP status codes
+  CloudWatch Alarms: Health check failures, RDS performance, Lambda errors
+  Dashboard: Unified monitoring for App Runner, RDS, and automation
+  Logging: Centralized CloudWatch Logs with retention policies
+```
+
+**Migration Phases** (3-week timeline):
+
+**Week 1: Infrastructure & Database Migration**
+- ✅ Create AWS RDS PostgreSQL instance with proper security configuration
+- ✅ Configure VPC, security groups, and network connectivity
+- ✅ Set up AWS Secrets Manager for credential management
+- ✅ Export existing PostgreSQL database and migrate to RDS
+- ✅ Run Alembic migrations to ensure schema compatibility
+- ✅ Optimize Dockerfile for App Runner deployment
+- ✅ Create ECR repository and push initial container image
+
+**Week 2: App Runner Deployment & Automation**
+- ✅ Create App Runner service with VPC connector
+- ✅ Configure environment variables and secrets integration
+- ✅ Implement /health endpoint for App Runner health checks
+- ✅ Create Lambda function for pause/resume automation
+- ✅ Set up EventBridge rules for daily schedule (2 AM pause, 6 AM resume)
+- ✅ Configure IAM roles and policies for least-privilege access
+- ✅ Test automated pause/resume functionality
+
+**Week 3: Testing, Monitoring & Go-Live**
+- ✅ Implement comprehensive post-migration validation tests
+- ✅ Set up CloudWatch monitoring dashboard and alarms
+- ✅ Performance testing and optimization
+- ✅ Document rollback procedures and operational runbook
+- ✅ Final validation and production cutover
+- ✅ Team training and handoff
+
+**Technical Benefits**:
+- **Simplified Deployment**: Docker-based deployment with automatic scaling
+- **Zero Server Management**: Fully managed infrastructure by AWS
+- **Cost Efficiency**: Intelligent pause scheduling reduces costs by ~12% monthly
+- **High Availability**: Auto-scaling and health monitoring built-in
+- **Unified AWS Stack**: Complete integration with existing AWS infrastructure
+- **Improved Monitoring**: Native CloudWatch integration for observability
+
+**Business Impact**:
+- **Zero Downtime**: Application available during all business hours (6 AM - 2 AM EST)
+- **Cost Predictability**: Fixed monthly costs with transparent pricing
+- **Operational Efficiency**: Automated infrastructure management
+- **Scalability**: Easy to scale up resources as usage grows
+- **Disaster Recovery**: RDS automated backups and point-in-time recovery
+
+**Migration Risks & Mitigations**:
+```yaml
+Risk: Database migration failure
+  Mitigation: Full backup before migration, test migration on staging first,
+              validate data integrity post-migration
+
+Risk: App Runner cold start delays after resume
+  Mitigation: Health check warming via Lambda, optimize Docker image size,
+              consider always-on if cold starts problematic
+
+Risk: WebSocket connection stability
+  Mitigation: Flask-SocketIO automatic reconnection, monitor connection metrics,
+              test WebSocket under App Runner environment
+
+Risk: Pause during active user session
+  Mitigation: Schedule pause at 2 AM (minimal traffic), log active sessions,
+              implement graceful shutdown warnings (future enhancement)
+
+Risk: Cost overruns from unexpected traffic
+  Mitigation: AWS Budget alerts ($70 threshold), CloudWatch alarms for traffic spikes,
+              daily spend monitoring in Cost Explorer
+```
+
+**Documentation Deliverables**:
+- ✅ Migration PRD: Comprehensive 21KB planning document
+- 📋 Deployment Guide: Step-by-step deployment instructions
+- 📋 Architecture Diagram: Visual infrastructure representation
+- 📋 Operations Runbook: Daily procedures and incident response
+- 📋 Cost Tracking: Monthly breakdown and optimization opportunities
+
+**Legacy Migration Considerations** (Post-App Runner):
+- **Database Migration**: PostgreSQL → Aurora PostgreSQL (future consolidation opportunity)
 - **API Rate Limiting**: YouTube API quota management during high-volume operations
-- **S3 Integration**: Seamless integration with existing S3 infrastructure
+- **S3 Integration**: Seamless integration with existing S3 infrastructure (already working)
 - **Real-time Features**: WebSocket server consolidation with existing infrastructure
 
 ### Application Integration Strategy
