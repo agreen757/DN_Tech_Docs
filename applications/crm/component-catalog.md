@@ -561,6 +561,179 @@ interface DownloadOptions {
 - Notification preferences
 - Data retention settings
 
+### YouTubeSearchModal.tsx
+**Purpose**: YouTube channel search and discovery interface for outreach campaigns
+**Location**: `src/components/outreach/YouTubeSearchModal.tsx`
+**Props**:
+```typescript
+interface YouTubeSearchModalProps {
+  open: boolean;                                    // Modal open state
+  onClose: () => void;                              // Close handler
+  reactionChannels: Array<{ channelUrl?: string }>; // Existing reaction channels
+  playlistingChannels: Array<{ channelUrl?: string }>; // Existing playlist channels
+  onChannelAdded: () => void;                       // Callback after channel added
+  activeCategory: OutreachCategory;                 // Current category context
+}
+```
+
+**Dependencies**:
+- `useYouTubeSearch` hook for search logic
+- `YouTubeSearchResults` component
+- `YouTubeChannelDetail` component
+- `ChannelConfirmationModal` component
+- Material-UI Dialog components
+
+**Features**:
+- Full-text YouTube channel search
+- Sort controls (relevance, viewCount, title)
+- Results per page configuration (10, 20, 50)
+- Pagination with next/previous navigation
+- Search query suggestions (default queries)
+- Channel selection and detailed view
+- Add to category (Reaction/Playlisting)
+- Duplicate channel detection
+- Error handling with retry capability
+
+**User Flow**:
+1. User opens modal from OutreachPage
+2. Enters search query or selects default query
+3. Adjusts sort order and results per page
+4. Reviews search results in data grid
+5. Clicks channel to view details
+6. Selects "Add to Reaction" or "Add to Playlisting"
+7. Reviews/edits channel info in confirmation modal
+8. Confirms to save to Firestore
+
+**State Management**:
+- Search query and results managed by `useYouTubeSearch`
+- Selected channel loaded on demand
+- Form values cached for confirmation modal
+- Notifications for success/error feedback
+
+### YouTubeSearchResults.tsx
+**Purpose**: Data grid display of YouTube channel search results
+**Location**: `src/components/outreach/YouTubeSearchResults.tsx`
+**Props**:
+```typescript
+interface YouTubeSearchResultsProps {
+  results: YouTubeSearchResult[];          // Array of channel results
+  onChannelSelect: (channelId: string) => void;  // Channel selection handler
+  loading: boolean;                        // Loading state indicator
+}
+```
+
+**Dependencies**:
+- Material-UI X Data Grid
+- Custom cell renderers for YouTube data
+- Number formatting utilities
+
+**Grid Columns**:
+- **Thumbnail**: Channel avatar image (64x64)
+- **Channel Name**: Title with clickable link
+- **Subscribers**: Formatted count (e.g., "1.2M")
+- **Views**: Total view count formatted
+- **Videos**: Video count
+- **Description**: Truncated text with tooltip
+
+**Features**:
+- Sortable columns by subscriber/view count
+- Row click handling for channel selection
+- Empty state messaging with helpful hints
+- Topic channel exclusion notice
+- Responsive column sizing
+- Density controls for data grid
+
+**Performance**:
+- Virtualized rows for large result sets
+- Memoized cell renderers
+- Optimized re-renders with React.memo
+
+### YouTubeChannelDetail.tsx
+**Purpose**: Detailed channel information display panel
+**Location**: `src/components/outreach/YouTubeChannelDetail.tsx`
+**Props**:
+```typescript
+interface YouTubeChannelDetailProps {
+  channel: YouTubeChannelSearchDetails | null;  // Full channel details
+  loading: boolean;                             // Loading indicator
+  onAddToReaction: () => void;                  // Add to Reaction handler
+  onAddToPlaylisting: () => void;               // Add to Playlisting handler
+  reactionChannels: Array<{ channelUrl?: string }>; // Existing reaction list
+  playlistingChannels: Array<{ channelUrl?: string }>; // Existing playlist list
+}
+```
+
+**Dependencies**:
+- Material-UI Card components
+- Number formatting utilities
+- URL normalization functions
+
+**Display Sections**:
+- **Header**: Channel thumbnail, title, custom URL
+- **Statistics**: Subscribers, views, videos formatted
+- **Description**: Full description text (scrollable)
+- **Metadata**: Country, publish date, extracted email
+- **Actions**: Add to Reaction/Playlisting buttons
+
+**Duplicate Detection**:
+- Checks if channel URL exists in reaction/playlisting lists
+- Disables "Add to" buttons if duplicate found
+- Shows warning message for duplicate channels
+
+**Email Extraction**:
+- Automatically extracts email from description using regex
+- Displays extracted email with copy functionality
+- Falls back to "Not found" if no email present
+
+### ChannelConfirmationModal.tsx
+**Purpose**: Channel information review and confirmation before saving
+**Location**: `src/components/outreach/ChannelConfirmationModal.tsx`
+**Props**:
+```typescript
+interface ChannelConfirmationModalProps {
+  open: boolean;                              // Modal state
+  onClose: () => void;                        // Close handler
+  onConfirm: (values: ChannelFormValues) => void;  // Confirm with edited values
+  initialValues: ChannelFormValues;           // Pre-filled channel data
+  category: OutreachCategory;                 // Target category
+  loading: boolean;                           // Saving state
+}
+
+interface ChannelFormValues {
+  channelName: string;
+  contactEmail: string;
+  contactName: string;
+  genre: string;
+  socialLinks: string[];
+  notes: string;
+}
+```
+
+**Dependencies**:
+- Material-UI Dialog and form components
+- Form validation utilities
+- Social link normalization
+
+**Form Fields**:
+- Channel Name (auto-filled from YouTube)
+- Contact Email (auto-filled if found)
+- Contact Name (editable)
+- Genre (required selection)
+- Social Links (auto-includes YouTube channel URL)
+- Notes (optional)
+
+**Validation**:
+- Required field checking
+- Email format validation
+- Genre selection required
+- Social link format verification
+
+**Pre-population Logic**:
+- Channel name from YouTube title
+- Email from description extraction
+- YouTube channel URL formatted
+- Custom URL if available
+
 ## Dashboard Module (`/pages/dashboard/`)
 
 ### Dashboard.tsx
@@ -675,6 +848,225 @@ interface DownloadOptions {
 **Dependencies**:
 - Campaign data models
 - API integration utilities
+
+**Functions**:
+- Campaign CRUD operations
+- Recipient list management
+- Campaign scheduling utilities
+- Performance tracking integration
+
+### YouTube Integration Services
+
+#### youtubeSearch.ts
+**Purpose**: YouTube Data API v3 client for channel search and discovery
+**Location**: `src/services/outreach/integrations/youtubeSearch.ts`
+**Dependencies**:
+- `youtubeAuth.ts` for token management
+- YouTube Data API v3
+- Outreach type definitions
+
+**Exported Functions**:
+
+**`searchYouTubeChannels(params: YouTubeSearchParams): Promise<YouTubeSearchResponse>`**
+- Searches YouTube for channels matching query
+- Fetches channel statistics via bulk channels API call
+- Filters out YouTube Topic channels automatically
+- Handles pagination with next/prev tokens
+- Implements exponential backoff retry for rate limits
+
+**Parameters**:
+```typescript
+interface YouTubeSearchParams {
+  query: string;                          // Search query
+  maxResults?: number;                    // 1-50, default 20
+  pageToken?: string;                     // For pagination
+  order?: 'relevance' | 'viewCount' | 'title';  // Sort order
+}
+```
+
+**Returns**:
+```typescript
+interface YouTubeSearchResponse {
+  items: YouTubeSearchResult[];           // Filtered channel results
+  nextPageToken?: string;                 // Next page token
+  prevPageToken?: string;                 // Previous page token
+  totalResults?: number;                  // Count after filtering
+  resultsPerPage: number;                 // Requested page size
+}
+```
+
+**`getChannelDetailsById(channelId: string): Promise<YouTubeChannelSearchDetails | null>`**
+- Fetches comprehensive channel details by ID
+- Includes snippet, statistics, contentDetails
+- Extracts email from description automatically
+- Returns null if channel not found
+
+**`filterTopicChannels(channels: YouTubeSearchResult[]): YouTubeSearchResult[]`**
+- Client-side filter for YouTube Topic channels
+- Checks title and description for "topic" keyword
+- Prevents auto-generated channels from appearing
+
+**`extractEmailFromDescription(description: string): string | undefined`**
+- Regex-based email extraction from text
+- Returns first email found or undefined
+- Pattern: `([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)`
+
+**Error Handling**:
+- Detailed error logging with context
+- Automatic token refresh on 401/403
+- Exponential backoff for 429 rate limits
+- User-friendly error messages
+
+#### youtubeAuth.ts
+**Purpose**: YouTube API access token management with caching
+**Location**: `src/services/outreach/integrations/youtubeAuth.ts`
+**Dependencies**:
+- Internal token service endpoint
+- API configuration
+
+**Token Caching Strategy**:
+- In-memory token cache with expiry tracking
+- 30-second refresh buffer before actual expiry
+- Prevents concurrent token requests via pending promise
+- Automatic invalidation on auth errors
+
+**Exported Functions**:
+
+**`getYouTubeAccessToken(): Promise<string>`**
+- Returns cached token if valid
+- Fetches new token from internal service if expired
+- Deduplicates concurrent requests
+- Updates cache with new token and expiry
+
+**`clearCachedYouTubeToken(): void`**
+- Invalidates cached token
+- Clears expiry timestamp
+- Cancels pending token requests
+- Used on 401/403 errors
+
+**Token Flow**:
+1. Check if cached token exists and is valid (30s buffer)
+2. If valid, return cached token immediately
+3. If expired/missing, request new token from internal service
+4. Parse response for token and expiry
+5. Cache token with calculated expiry timestamp
+6. Return fresh token
+
+**Configuration** (`src/config/api.config.ts`):
+```typescript
+export const youtubeAuthConfig = {
+  tokenUrl: string;    // Internal token service endpoint
+  apiKey: string;      // API key for token service
+};
+```
+
+### Custom Hooks (`/hooks/`)
+
+#### useYouTubeSearch.ts
+**Purpose**: React hook for YouTube channel search with state management and caching
+**Location**: `src/hooks/useYouTubeSearch.ts`
+**Dependencies**:
+- `youtubeSearch.ts` service
+- sessionStorage for persistence
+- React hooks (useState, useCallback, useEffect)
+
+**Returned State and Functions**:
+```typescript
+interface UseYouTubeSearchReturn {
+  // Search state
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchResults: YouTubeSearchResult[];
+  selectedChannel: YouTubeChannelSearchDetails | null;
+  setSelectedChannel: (channel: YouTubeChannelSearchDetails | null) => void;
+  
+  // Loading states
+  loadingState: LoadingState;              // Detailed loading context
+  loading: boolean;                        // General loading flag
+  detailsLoading: boolean;                 // Channel details loading
+  
+  // Error handling
+  error: string | null;                    // User-friendly error message
+  retryCount: number;                      // Current retry attempt
+  canRetry: boolean;                       // Retry available flag
+  performRetry: () => Promise<void>;       // Retry last operation
+  
+  // Pagination
+  currentPage: number;                     // Current page number (1-indexed)
+  pageToken: string | undefined;           // Next page token
+  prevPageToken: string | undefined;       // Previous page token
+  totalResults: number;                    // Total result count
+  pageTokens: Map<number, string>;         // Page token cache
+  
+  // Configuration
+  sortOrder: YouTubeSortOrder;             // Current sort order
+  setSortOrder: (order: YouTubeSortOrder) => void;
+  resultsPerPage: number;                  // Results per page (10, 20, 50)
+  setResultsPerPage: (count: number) => void;
+  
+  // Actions
+  performSearch: (overrideQuery?: string) => Promise<void>;
+  fetchChannelDetails: (channelId: string) => Promise<void>;
+  nextPage: () => Promise<void>;
+  prevPage: () => Promise<void>;
+  goToPage: (pageNum: number) => Promise<void>;
+  resetSearch: () => void;
+  
+  // Caching
+  resultsCache: Map<string, CachedResults>;  // Query/sort/page cache
+}
+```
+
+**Key Features**:
+- **Result Caching**: Results cached by query+sort+page key in memory
+- **Session Persistence**: State saved to sessionStorage for page refreshes
+- **Smart Loading States**: Tracks operation type (initial, pagination, sort)
+- **Error Recovery**: Retry mechanism with exponential backoff
+- **Pagination Management**: Token-based navigation with page number tracking
+- **Deduplication**: Prevents duplicate API calls via loading checks
+
+**Caching Strategy**:
+```typescript
+// Cache key format: "query:sortOrder:page"
+const cacheKey = generateCacheKey(query, sortOrder, currentPage);
+
+// Cache structure
+interface CachedResults {
+  items: YouTubeSearchResult[];
+  nextPageToken?: string;
+  prevPageToken?: string;
+  totalResults: number;
+  timestamp: number;                       // For potential TTL
+}
+```
+
+**Session Storage Schema**:
+```typescript
+const SESSION_STORAGE_KEY = 'youtubeSearchState';
+
+interface SessionStorageState {
+  searchQuery: string;
+  currentPage: number;
+  sortOrder: YouTubeSortOrder;
+  resultsPerPage: number;
+  pageTokens: Array<[number, string]>;     // Map serialized as array
+  resultsCache: Array<[string, CachedResults]>;
+}
+```
+
+**Error Categorization**:
+- **Quota Exceeded**: 403 errors from YouTube API
+- **Rate Limited**: 429 errors with retry suggestion
+- **Unauthorized**: 401/403 token errors with refresh
+- **Invalid Page Token**: 400 errors on pagination
+- **Network Errors**: Connectivity issues
+- **Generic Errors**: Fallback user-friendly messages
+
+**Functions**:
+- Campaign CRUD operations
+- Recipient list management
+- Campaign scheduling utilities
+- Performance tracking integration
 
 **Service Functions**:
 - Campaign CRUD operations

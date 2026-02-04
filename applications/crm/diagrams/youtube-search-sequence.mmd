@@ -1,0 +1,81 @@
+sequenceDiagram
+    participant User
+    participant YouTubeSearchModal
+    participant useYouTubeSearch
+    participant youtubeSearch
+    participant youtubeAuth
+    participant YouTubeAPI as YouTube Data API v3
+    
+    User->>YouTubeSearchModal: Opens search modal
+    YouTubeSearchModal->>useYouTubeSearch: Initialize hook
+    useYouTubeSearch->>useYouTubeSearch: Load cached state from sessionStorage
+    
+    User->>YouTubeSearchModal: Enters search query
+    User->>YouTubeSearchModal: Selects sort order (relevance/viewCount/title)
+    User->>YouTubeSearchModal: Clicks search
+    
+    YouTubeSearchModal->>useYouTubeSearch: performSearch()
+    useYouTubeSearch->>youtubeAuth: getYouTubeAccessToken()
+    
+    alt Token is cached and valid
+        youtubeAuth-->>useYouTubeSearch: Return cached token
+    else Token expired or missing
+        youtubeAuth->>YouTubeAPI: Request new access token
+        YouTubeAPI-->>youtubeAuth: Return access token + expiry
+        youtubeAuth->>youtubeAuth: Cache token with expiry
+        youtubeAuth-->>useYouTubeSearch: Return new token
+    end
+    
+    useYouTubeSearch->>youtubeSearch: searchYouTubeChannels(params)
+    youtubeSearch->>YouTubeAPI: GET /youtube/v3/search<br/>?part=snippet&type=channel&q={query}&order={order}
+    
+    alt Success (200)
+        YouTubeAPI-->>youtubeSearch: Return search results with channel IDs
+        youtubeSearch->>YouTubeAPI: GET /youtube/v3/channels<br/>?part=snippet,statistics&id={channelIds}
+        YouTubeAPI-->>youtubeSearch: Return channel statistics
+        youtubeSearch->>youtubeSearch: Map and merge data
+        youtubeSearch->>youtubeSearch: Filter out Topic channels
+        youtubeSearch-->>useYouTubeSearch: Return YouTubeSearchResponse
+    else 401/403 (Auth error)
+        YouTubeAPI-->>youtubeSearch: Auth error
+        youtubeSearch->>youtubeAuth: clearCachedYouTubeToken()
+        youtubeSearch->>youtubeAuth: getYouTubeAccessToken()
+        youtubeSearch->>YouTubeAPI: Retry request with new token
+    else 429 (Rate limit)
+        YouTubeAPI-->>youtubeSearch: Rate limit error
+        youtubeSearch->>youtubeSearch: Exponential backoff retry (3 attempts)
+    else Other error
+        YouTubeAPI-->>youtubeSearch: Error response
+        youtubeSearch-->>useYouTubeSearch: Throw error with message
+    end
+    
+    useYouTubeSearch->>useYouTubeSearch: Cache results by query/sort/page
+    useYouTubeSearch->>useYouTubeSearch: Save state to sessionStorage
+    useYouTubeSearch-->>YouTubeSearchModal: Update searchResults state
+    
+    YouTubeSearchModal->>YouTubeSearchResults: Render results in DataGrid
+    YouTubeSearchResults-->>User: Display channel list
+    
+    User->>YouTubeSearchResults: Clicks on channel row
+    YouTubeSearchResults->>YouTubeSearchModal: onChannelSelect(channelId)
+    YouTubeSearchModal->>useYouTubeSearch: fetchChannelDetails(channelId)
+    
+    useYouTubeSearch->>youtubeSearch: getChannelDetailsById(channelId)
+    youtubeSearch->>YouTubeAPI: GET /youtube/v3/channels<br/>?part=snippet,contentDetails,statistics&id={channelId}
+    YouTubeAPI-->>youtubeSearch: Return full channel details
+    youtubeSearch->>youtubeSearch: Extract email from description (regex)
+    youtubeSearch-->>useYouTubeSearch: Return YouTubeChannelSearchDetails
+    
+    useYouTubeSearch-->>YouTubeSearchModal: Update selectedChannel state
+    YouTubeSearchModal->>YouTubeChannelDetail: Render channel details
+    YouTubeChannelDetail-->>User: Display full channel info
+    
+    User->>YouTubeChannelDetail: Clicks "Add to [Category]"
+    YouTubeChannelDetail->>YouTubeSearchModal: onAddToCategory(category)
+    YouTubeSearchModal->>ChannelConfirmationModal: Open with channel data
+    User->>ChannelConfirmationModal: Reviews and confirms
+    ChannelConfirmationModal->>YouTubeSearchModal: onConfirm(formValues)
+    YouTubeSearchModal->>Firestore: addOutreachItem()
+    Firestore-->>YouTubeSearchModal: Success
+    YouTubeSearchModal-->>User: Show success notification
+    YouTubeSearchModal->>YouTubeSearchModal: onChannelAdded() callback

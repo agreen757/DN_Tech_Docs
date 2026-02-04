@@ -1,0 +1,80 @@
+graph TB
+    subgraph "UI Components"
+        YSModal[YouTubeSearchModal.tsx]
+        YSResults[YouTubeSearchResults.tsx]
+        YCDetail[YouTubeChannelDetail.tsx]
+        ConfModal[ChannelConfirmationModal.tsx]
+    end
+    
+    subgraph "Hooks Layer"
+        YSHook[useYouTubeSearch.ts]
+    end
+    
+    subgraph "Service Layer"
+        YSearch[youtubeSearch.ts]
+        YAuth[youtubeAuth.ts]
+        FSCrud[firestore/crud.ts]
+    end
+    
+    subgraph "Configuration"
+        APIConfig[api.config.ts]
+    end
+    
+    subgraph "Types"
+        OutreachTypes[types/outreach.ts]
+        ServiceTypes[services/outreach/types.ts]
+    end
+    
+    subgraph "External APIs"
+        YTAPI[YouTube Data API v3]
+        TokenAPI[Internal Token Service]
+        Firestore[Firebase Firestore]
+    end
+    
+    subgraph "Storage"
+        SessionStore[sessionStorage]
+        TokenCache[In-Memory Token Cache]
+    end
+    
+    YSModal --> YSResults
+    YSModal --> YCDetail
+    YSModal --> ConfModal
+    YSModal --> YSHook
+    YSModal --> FSCrud
+    
+    YSResults --> YSHook
+    YCDetail --> YSHook
+    
+    YSHook --> YSearch
+    YSHook --> SessionStore
+    
+    YSearch --> YAuth
+    YSearch --> YTAPI
+    
+    YAuth --> TokenAPI
+    YAuth --> TokenCache
+    YAuth --> APIConfig
+    
+    FSCrud --> Firestore
+    
+    YSModal -.uses types.-> OutreachTypes
+    YSHook -.uses types.-> OutreachTypes
+    YSHook -.uses types.-> ServiceTypes
+    YSearch -.uses types.-> OutreachTypes
+    YSearch -.uses types.-> ServiceTypes
+    
+    classDef component fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef hook fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef service fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef external fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    classDef storage fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef config fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef types fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    
+    class YSModal,YSResults,YCDetail,ConfModal component
+    class YSHook hook
+    class YSearch,YAuth,FSCrud service
+    class YTAPI,TokenAPI,Firestore external
+    class SessionStore,TokenCache storage
+    class APIConfig config
+    class OutreachTypes,ServiceTypes types

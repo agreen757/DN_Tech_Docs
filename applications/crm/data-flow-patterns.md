@@ -98,6 +98,123 @@ const MailerTemplate: React.FC = () => {
     content: "",
     subject: "",
     emailList: [],
+```
+
+### 2. YouTube Channel Search Flow
+
+#### Overview
+This flow describes how the CRM application integrates with the YouTube Data API v3 to enable users to search for YouTube channels, view their details, and add them to outreach categories. The process involves several client-side components and services, robust caching, and error handling.
+
+#### Data Flow Diagram
+```mermaid
+%% This diagram is generated from /applications/crm/diagrams/youtube-search-sequence.mmd
+sequenceDiagram
+    participant User
+    participant YouTubeSearchModal
+    participant useYouTubeSearch
+    participant youtubeSearch
+    participant youtubeAuth
+    participant YouTubeAPI as YouTube Data API v3
+    
+    User->>YouTubeSearchModal: Opens search modal
+    YouTubeSearchModal->>useYouTubeSearch: Initialize hook
+    useYouTubeSearch->>useYouTubeSearch: Load cached state from sessionStorage
+    
+    User->>YouTubeSearchModal: Enters search query
+    User->>YouTubeSearchModal: Selects sort order (relevance/viewCount/title)
+    User->>YouTubeSearchModal: Clicks search
+    
+    YouTubeSearchModal->>useYouTubeSearch: performSearch()
+    useYouTubeSearch->>youtubeAuth: getYouTubeAccessToken()
+    
+    alt Token is cached and valid
+        youtubeAuth-->>useYouTubeSearch: Return cached token
+    else Token expired or missing
+        youtubeAuth->>YouTubeAPI: Request new access token
+        YouTubeAPI-->>youtubeAuth: Return access token + expiry
+        youtubeAuth->>youtubeAuth: Cache token with expiry
+        youtubeAuth-->>useYouTubeSearch: Return new token
+    end
+    
+    useYouTubeSearch->>youtubeSearch: searchYouTubeChannels(params)
+    youtubeSearch->>YouTubeAPI: GET /youtube/v3/search<br/>?part=snippet&type=channel&q={query}&order={order}
+    
+    alt Success (200)
+        YouTubeAPI-->>youtubeSearch: Return search results with channel IDs
+        youtubeSearch->>YouTubeAPI: GET /youtube/v3/channels<br/>?part=snippet,statistics&id={channelIds}
+        YouTubeAPI-->>youtubeSearch: Return channel statistics
+        youtubeSearch->>youtubeSearch: Map and merge data
+        youtubeSearch->>youtubeSearch: Filter out Topic channels
+        youtubeSearch-->>useYouTubeSearch: Return YouTubeSearchResponse
+    else 401/403 (Auth error)
+        YouTubeAPI-->>youtubeSearch: Auth error
+        youtubeSearch->>youtubeAuth: clearCachedYouTubeToken()
+        youtubeSearch->>youtubeAuth: getYouTubeAccessToken()
+        youtubeSearch->>YouTubeAPI: Retry request with new token
+    else 429 (Rate limit)
+        YouTubeAPI-->>youtubeSearch: Rate limit error
+        youtubeSearch->>youtubeSearch: Exponential backoff retry (3 attempts)
+    else Other error
+        YouTubeAPI-->>youtubeSearch: Error response
+        youtubeSearch-->>useYouTubeSearch: Throw error with message
+    end
+    
+    useYouTubeSearch->>useYouTubeSearch: Cache results by query/sort/page
+    useYouTubeSearch->>useYouTubeSearch: Save state to sessionStorage
+    useYouTubeSearch-->>YouTubeSearchModal: Update searchResults state
+    
+    YouTubeSearchModal->>YouTubeSearchResults: Render results in DataGrid
+    YouTubeSearchResults-->>User: Display channel list
+    
+    User->>YouTubeSearchResults: Clicks on channel row
+    YouTubeSearchResults->>YouTubeSearchModal: onChannelSelect(channelId)
+    YouTubeSearchModal->>useYouTubeSearch: fetchChannelDetails(channelId)
+    
+    useYouTubeSearch->>youtubeSearch: getChannelDetailsById(channelId)
+    youtubeSearch->>YouTubeAPI: GET /youtube/v3/channels<br/>?part=snippet,contentDetails,statistics&id={channelId}
+    YouTubeAPI-->>youtubeSearch: Return full channel details
+    youtubeSearch->>youtubeSearch: Extract email from description (regex)
+    youtubeSearch-->>useYouTubeSearch: Return YouTubeChannelSearchDetails
+    
+    useYouTubeSearch-->>YouTubeSearchModal: Update selectedChannel state
+    YouTubeSearchModal->>YouTubeChannelDetail: Render channel details
+    YouTubeChannelDetail-->>User: Display full channel info
+    
+    User->>YouTubeChannelDetail: Clicks "Add to [Category]"
+    YouTubeChannelDetail->>YouTubeSearchModal: onAddToCategory(category)
+    YouTubeSearchModal->>ChannelConfirmationModal: Open with channel data
+    User->>ChannelConfirmationModal: Reviews and confirms
+    ChannelConfirmationModal->>YouTubeSearchModal: onConfirm(formValues)
+    YouTubeSearchModal->>Firestore: addOutreachItem()
+    Firestore-->>YouTubeSearchModal: Success
+    YouTubeSearchModal-->>User: Show success notification
+    YouTubeSearchModal->>YouTubeSearchModal: onChannelAdded() callback
+```
+
+#### Key Components and Data Flow
+
+**1. `YouTubeSearchModal.tsx`**: The main UI component that orchestrates the YouTube search experience. It handles user input, displays search results, and manages the selection of channels.
+
+**2. `useYouTubeSearch.ts`**: A custom React hook that encapsulates the core search logic, state management, and caching. It interacts with the `youtubeSearch` service and `sessionStorage` for persistence.
+
+**3. `youtubeSearch.ts`**: The service layer module responsible for making direct calls to the YouTube Data API v3. It handles API request parameters, response parsing, error handling (including retries and token refresh), and post-processing like filtering out Topic channels and extracting emails.
+
+**4. `youtubeAuth.ts`**: Manages the authentication process for the YouTube API. It interacts with an internal token service to acquire OAuth 2.0 access tokens, which are then cached in-memory with automatic refresh mechanisms.
+
+**5. YouTube Data API v3**: The external API providing search functionality and detailed channel information. The CRM utilizes two main endpoints:
+   - `GET /youtube/v3/search`: For initial channel discovery based on query.
+   - `GET /youtube/v3/channels`: For fetching detailed statistics and metadata for specific channels, or comprehensive details for a single channel.
+
+**6. `sessionStorage`**: Used by `useYouTubeSearch` to persist search state (query, results, pagination tokens, sort order) across page refreshes, enhancing user experience.
+
+**7. Firebase Firestore**: Once a channel is confirmed by the user, its details are saved as an outreach item in Firestore via `firestore/crud.ts`.
+
+**Error Handling and Retries**:
+- The `youtubeSearch.ts` service implements robust error handling for YouTube API responses, including automatic token refresh on `401`/`403` errors and exponential backoff for `429` (rate limit) errors.
+- The `useYouTubeSearch` hook provides user-friendly error messages and a retry mechanism.
+
+For detailed information on API endpoints and authentication, refer to [API Integrations](./api-integrations.md#youtube-data-api-v3-integration).
+For a catalog of related UI components and their props, see [Component Catalog](./component-catalog.md#youtubesearchmodal.tsx).
     sendAll: false,
     testing: false,
     emailType: "financial",

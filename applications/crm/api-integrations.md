@@ -1260,6 +1260,226 @@ const sendEmail = async (emailData: EmailRequest) => {
 };
 ```
 
+### YouTube Data API v3 Integration
+**Purpose**: YouTube channel search and discovery for outreach campaigns  
+**Base URL**: `https://www.googleapis.com/youtube/v3`  
+**Authentication**: OAuth 2.0 Access Token (Bearer Token)  
+**Configuration Location**: `src/config/api.config.ts` (youtubeAuthConfig)
+
+#### YouTube API Endpoints Used
+
+##### Search API - Channel Discovery
+**Endpoint**: `GET /youtube/v3/search`  
+**Purpose**: Search for YouTube channels based on query terms  
+**Required Parameters**:
+- `part=snippet` - Returns basic channel information
+- `type=channel` - Limits results to channels only
+- `q={query}` - Search query string
+- `order={order}` - Sort order (relevance, viewCount, title)
+- `maxResults={1-50}` - Number of results per page
+
+**Example Request**:
+```bash
+GET https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=music+reaction&order=relevance&maxResults=20
+Authorization: Bearer {access_token}
+```
+
+**Response Structure**:
+```typescript
+interface YouTubeSearchAPIResponse {
+  items: Array<{
+    id: {
+      channelId: string;
+    };
+    snippet: {
+      title: string;
+      description: string;
+      thumbnails: {
+        medium: { url: string };
+      };
+    };
+  }>;
+  nextPageToken?: string;
+  prevPageToken?: string;
+}
+```
+
+##### Channels API - Detailed Channel Information
+**Endpoint**: `GET /youtube/v3/channels`  
+**Purpose**: Fetch detailed statistics and metadata for specific channels  
+**Required Parameters**:
+- `part=snippet,statistics` - Returns channel details and statistics
+- `id={channelIds}` - Comma-separated list of channel IDs (up to 50)
+
+**Example Request**:
+```bash
+GET https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=UCxxxxxx,UCyyyyyy
+Authorization: Bearer {access_token}
+```
+
+**Response Structure**:
+```typescript
+interface YouTubeChannelsAPIResponse {
+  items: Array<{
+    id: string;
+    snippet: {
+      title: string;
+      description: string;
+      customUrl?: string;
+      country?: string;
+      publishedAt: string;
+      thumbnails: {
+        default: { url: string };
+        medium: { url: string };
+        high: { url: string };
+      };
+    };
+    statistics: {
+      subscriberCount: string;
+      viewCount: string;
+      videoCount: string;
+    };
+  }>;
+}
+```
+
+##### Channels API - Single Channel Details
+**Endpoint**: `GET /youtube/v3/channels`  
+**Purpose**: Fetch comprehensive details for a single channel (includes contentDetails)  
+**Required Parameters**:
+- `part=snippet,contentDetails,statistics` - Returns full channel information
+- `id={channelId}` - Single channel ID
+
+**Used For**: Loading detailed view when user selects a channel from search results
+
+#### Authentication Flow
+
+**Token Management**:
+- Access tokens are obtained from an internal token service
+- Tokens are cached in-memory with expiry tracking
+- 30-second buffer before expiry triggers automatic refresh
+- Invalid/expired tokens trigger re-authentication
+
+**Implementation** (`src/services/outreach/integrations/youtubeAuth.ts`):
+```typescript
+interface YouTubeAuthConfig {
+  tokenUrl: string;        // Internal service endpoint
+  apiKey: string;          // API key for token service
+}
+
+// Token caching with expiry
+let cachedToken: string | null = null;
+let tokenExpiresAt = 0;
+
+async function getYouTubeAccessToken(): Promise<string> {
+  if (isTokenValid()) {
+    return cachedToken;
+  }
+  
+  // Request new token from internal service
+  const response = await fetch(tokenUrl, {
+    headers: { 'x-api-key': apiKey }
+  });
+  
+  const { token, expires_in } = await response.json();
+  cachedToken = token;
+  tokenExpiresAt = Date.now() + expires_in * 1000;
+  
+  return token;
+}
+```
+
+#### Error Handling
+
+**API Error Responses**:
+- `400` - Invalid parameters (e.g., bad page token)
+- `401` - Unauthorized (token expired or invalid)
+- `403` - Quota exceeded or access forbidden
+- `429` - Rate limited
+
+**Retry Strategy**:
+```typescript
+// Exponential backoff for rate limits (429)
+async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  try {
+    const response = await fetch(url);
+    
+    if (response.status === 429 && retries > 0) {
+      const delay = Math.pow(2, 4 - retries) * 1000;  // 2s, 4s, 8s
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, retries - 1);
+    }
+    
+    return response;
+  } catch (error) {
+    if (retries > 0) {
+      const delay = Math.pow(2, 4 - retries) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, retries - 1);
+    }
+    throw error;
+  }
+}
+```
+
+**Token Refresh on Auth Errors**:
+```typescript
+// Automatic token refresh on 401/403
+if (response.status === 401 || response.status === 403) {
+  clearCachedYouTubeToken();
+  accessToken = await getYouTubeAccessToken();
+  response = await fetchWithRetry(url);  // Retry with new token
+}
+```
+
+#### Data Processing
+
+**Topic Channel Filtering**:
+YouTube Topic channels (auto-generated by YouTube) are automatically filtered from search results to ensure only real content creator channels are displayed.
+
+```typescript
+function filterTopicChannels(channels: YouTubeSearchResult[]): YouTubeSearchResult[] {
+  return channels.filter(channel => {
+    const title = channel.channelTitle.toLowerCase();
+    const description = channel.channelDescription.toLowerCase();
+    return !title.includes('topic') && !description.includes('topic');
+  });
+}
+```
+
+**Email Extraction**:
+Channel descriptions are scanned for email addresses to facilitate outreach:
+
+```typescript
+function extractEmailFromDescription(description: string): string | undefined {
+  const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+  const emails = description.match(emailRegex);
+  return emails && emails.length > 0 ? emails[0] : undefined;
+}
+```
+
+#### Rate Limiting & Quotas
+
+**YouTube API Quotas**:
+- Default: 10,000 units per day
+- Search operation: ~100 units per request
+- Channels operation: ~1 unit per request
+
+**Client-Side Optimizations**:
+- Results cached by query/sort/page in sessionStorage
+- Pagination tokens stored to avoid redundant searches
+- Statistics fetched in bulk (up to 50 channels per request)
+
+#### Integration Architecture
+
+See [Data Flow Patterns](./data-flow-patterns.md#youtube-channel-search-flow) for complete sequence diagram.
+
+**Key Files**:
+- `src/services/outreach/integrations/youtubeSearch.ts` - API client
+- `src/services/outreach/integrations/youtubeAuth.ts` - Token management
+- `src/hooks/useYouTubeSearch.ts` - React hook with caching
+- `src/components/outreach/YouTubeSearchModal.tsx` - UI component
+
 ## Security Considerations
 
 ### Outreach API Security (NEW)
