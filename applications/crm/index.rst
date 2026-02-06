@@ -8,3 +8,9 @@ Customer Relationship Management system documentation.
    :caption: CRM Documentation:
 
    architecture-overview
+   api-integrations
+   authentication-flows
+   component-catalog
+   data-flow-patterns
+   development-setup
+   channel-population-tools
