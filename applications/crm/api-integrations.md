@@ -1241,6 +1241,502 @@ interface PaginationOptions {
 }
 ```
 
+### Financial Mailer API Integration (NEW)
+
+**Base URL**: `https://<API_GATEWAY_ID>.execute-api.<REGION>.amazonaws.com/dev`  
+**Authentication**: Firebase JWT Bearer Token  
+**Service**: Financial Report Distribution  
+**Configuration Location**: `lambda/finance/serverless.yml`
+
+#### Overview
+
+The Financial Mailer infrastructure provides secure, scalable distribution of monthly financial reports to content creators via email. Reports are stored in S3, accessed through CloudFront signed URLs (25-day expiration), and delivered via AWS SES.
+
+**Key Architecture:**
+- **Storage:** S3 bucket with CloudFront distribution
+- **Distribution:** CloudFront signed URLs for secure access
+- **Email Delivery:** AWS SES with contact list management
+- **Database:** DynamoDB for tracking, Firestore for user/channel mapping
+- **Authentication:** Firebase JWT tokens
+
+#### Financial API Endpoints
+
+##### `/financial/send-report` - Send Financial Reports
+**Method**: POST  
+**Purpose**: Send monthly financial reports with CloudFront signed URLs  
+**Lambda Function**: Financial report sender (Node.js 20.x, 512MB, 5min timeout)  
+**Authentication**: Required (JWT Bearer Token with finance role)
+
+**Request Payload**:
+```typescript
+interface FinancialReportRequest {
+  to: string | string[];              // Recipient email(s)
+  subject: string;                    // Email subject line
+  message_greeting: string;           // Personalized greeting
+  message_body: string;               // Email body content
+  month: string;                      // Report month (e.g., "January", "01")
+  year: string;                       // Report year (e.g., "2025")
+  customIds?: string[];               // Array of custom IDs to include
+  attachReporting?: boolean;          // Include financial reports (triggers S3 lookup)
+  from?: string;                      // Optional sender email
+  tags?: string[];                    // Email tracking tags
+  campaignId?: string;                // Campaign identifier
+  footerNote?: string;                // Additional footer text
+}
+```
+
+**Response Schema**:
+```typescript
+interface FinancialReportResponse {
+  success: boolean;
+  message: string;
+  data: {
+    campaignId: string;
+    batchId: string;
+    provider: "SES";
+    attachReporting: boolean;
+    totalRecipients: number;
+    successful: number;
+    failed: number;
+    duration: number;                 // Milliseconds
+    month: string;
+    year: string;
+    customIds: string[];
+    reporting: {
+      payoutCount: number;            // Number of payout records processed
+      downloadLinkGroups: number;     // Number of CloudFront signed URLs generated
+    };
+    results: {
+      successful: SendResultEntry[];
+      failed: SendResultEntry[];
+    };
+  };
+}
+```
+
+**Example Request**:
+```bash
+curl -X POST https://{api-id}.execute-api.{region}.amazonaws.com/{stage}/financial/send-report \
+  -H "Authorization: Bearer {firebase-jwt-token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": ["creator@example.com"],
+    "subject": "Your January 2025 Financial Report",
+    "message_greeting": "Hello Artist Name",
+    "message_body": "Please find your monthly earnings summary below.",
+    "month": "January",
+    "year": "2025",
+    "customIds": ["ARTISTID123"],
+    "attachReporting": true
+  }'
+```
+
+**Status Codes**:
+- `200` - All emails sent successfully
+- `207` - Partial success (some emails failed)
+- `400` - Validation error (missing required fields)
+- `401` - Authentication failed
+- `403` - Insufficient permissions (requires finance role)
+- `500` - Internal server error
+
+##### `/financial/tracking-data` - Email Tracking Analytics
+**Method**: GET  
+**Purpose**: Retrieve email delivery/open/click tracking data  
+**Authentication**: Firebase JWT  
+**Lambda Function**: Financial tracking handler (Node.js 20.x)
+
+**Query Parameters**:
+```typescript
+interface TrackingDataQuery {
+  campaignId?: string;
+  startDate?: string;  // ISO 8601 format
+  endDate?: string;
+  month?: string;
+  year?: string;
+  email?: string;
+  limit?: number;
+  offset?: number;
+}
+```
+
+##### `/financial/unsubscribe` - Unsubscribe Management
+**Methods**: GET, POST, OPTIONS  
+**Purpose**: Handle unsubscribe requests (GET redirects to CRM, POST handles one-click)  
+**Lambda Function**: Unsubscribe handler (shared with outreach)
+
+##### `/financial/add-contact` - Contact Management
+**Method**: POST  
+**Purpose**: Re-subscribe contacts or update preferences  
+**Authentication**: Firebase JWT  
+**Lambda Function**: Contact management handler (shared with outreach)
+
+#### CloudFront Signed URLs Implementation
+
+**Purpose**: Secure, time-limited access to financial reports stored in S3  
+**Lambda Module**: `lambda/finance/src/utils/cloudfront.ts`
+
+**Key Features**:
+- **Private Key Storage**: AWS Secrets Manager (secret name configured via environment)
+- **URL Expiration**: 25-day maximum access period (configurable)
+- **Security**: HTTPS-only enforcement, Origin Access Control (OAC)
+- **Distribution**: CloudFront distribution domain (configured via environment)
+- **Key Pair ID**: Configured via `CLOUDFRONT_KEY_PAIR_ID` environment variable
+
+**URL Generation Flow**:
+```typescript
+// 1. Normalize custom IDs with special mappings
+const SPECIAL_CUSTOM_ID_MAP: Record<string, string> = {
+  // Custom ID aliases configured per deployment
+  CUSTOM_ID_A: 'MAPPED_ID_1',
+  CUSTOM_ID_B: 'MAPPED_ID_2',
+};
+
+// 2. Resolve S3 keys (checks multiple path patterns)
+const pathPatterns = [
+  'financial-reports/{year}/{month}/{customId}-youtube.pdf',
+  'financial-reports/{year}/{month}/{customId}-distro.pdf',
+  'Exports/{year}/{month}/{customId}/{customId}.zip',  // Legacy
+];
+
+// 3. Generate signed URL
+import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
+
+const signedUrl = getSignedUrl({
+  url: resourceUrl,
+  keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID,
+  privateKey: await getPrivateKey(),  // From Secrets Manager
+  dateLessThan: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
+});
+```
+
+**Example Signed URL Output**:
+```typescript
+{
+  custom_id: "ARTISTID123",
+  links: [
+    {
+      type: "youtube",
+      filename: "ARTISTID123-youtube.pdf",
+      url: "https://{cloudfront-domain}/financial-reports/2025/January/ARTISTID123-youtube.pdf?Expires=1740000000&Signature=ABC123...&Key-Pair-Id={key-pair-id}",
+      label: "YouTube Report"
+    },
+    {
+      type: "distro",
+      filename: "ARTISTID123-distro.pdf",
+      url: "https://{cloudfront-domain}/financial-reports/2025/January/ARTISTID123-distro.pdf?...",
+      label: "Distribution Report"
+    }
+  ]
+}
+```
+
+#### Data Flow: Email → Custom ID → S3 Report
+
+**Mapping Architecture**:
+
+```
+CRM Frontend (React + Firebase)
+         ↓
+Firestore: users/{uid}/creators[]/channels[]
+         ↓ Extract customIDs
+POST /financial/send-report
+         ↓ Authentication & Validation
+Lambda: Financial Report Handler
+         ↓
+[Parallel Processing]
+├─→ Invoke Payouts Fetch Lambda (Aurora/MySQL)
+│   Returns payout data by customId
+│
+└─→ Generate CloudFront Signed URLs
+    ├─ Normalize custom IDs (special mappings applied)
+    ├─ Resolve S3 keys (12+ path variants checked)
+    ├─ Generate signed URLs (25-day expiration)
+    └─ Group by custom ID
+         ↓
+Render HTML Email Template
+├─ Embed payout data
+├─ Embed signed download URLs
+└─ Add unsubscribe footer
+         ↓
+Send via Amazon SES
+├─ Check contact list (not unsubscribed)
+├─ Rate limit: 100ms delay between sends
+├─ Attach List-Unsubscribe headers
+└─ Log to DynamoDB tracking table
+         ↓
+DynamoDB: Tracking Table
+Record: campaignId, recipient, customIds, month, year, timestamp
+```
+
+**Firestore User Schema**:
+```typescript
+// Collection: users, Document ID: Firebase UID
+interface EmailUser {
+  userName: string;
+  emailsUser: string;              // Primary email
+  status: string;
+  creators?: {
+    channels?: {
+      customID: string;            // ← Custom ID mapping key
+      channelName?: string;
+      platform?: string;
+    }[];
+  }[];
+}
+```
+
+**Custom ID Resolution Algorithm**:
+
+The Lambda checks multiple S3 path patterns to support both new and legacy structures:
+
+```typescript
+// New structure (preferred)
+financial-reports/{year}/{month}/{customId}-youtube.pdf
+financial-reports/{year}/{month}/{customId}-distro.pdf
+
+// Legacy structure
+Exports/{year}/{month}/{customId}/{customId}.zip
+Distro/{year}/{month}/{customId}/{customId}.zip
+
+// Variants checked for each:
+// - Month: "January", "january", "JANUARY", "01"
+// - Custom ID: uppercase, with/without dashes/underscores
+```
+
+#### S3 Bucket Structure
+
+**Bucket Name**: Configured via `S3_BUCKET_NAME` environment variable
+
+**Directory Organization**:
+```
+{s3-bucket}/
+├── financial-reports/           # New organized structure
+│   ├── 2025/
+│   │   ├── January/
+│   │   │   ├── ARTISTID123-youtube.pdf
+│   │   │   ├── ARTISTID123-distro.pdf
+│   │   │   └── ...
+│   │   └── February/
+│   └── 2024/
+│
+├── Exports/                     # Legacy YouTube reports
+│   └── {year}/{month}/{customId}/{customId}.zip
+│
+├── Distro/                      # Legacy distribution reports
+│   └── {year}/{month}/{customId}/{customId}.zip
+│
+└── financial/profile-pictures/  # Artist profile images
+    ├── ARTISTID123.jpg
+    └── ARTISTID456.png
+```
+
+#### DynamoDB Tables
+
+**Table**: Configured via `FINANCIAL_CAMPAIGN_TRACKING_TABLE` environment variable
+
+**Purpose**: Track email sends, opens, clicks, bounces
+
+**Schema**:
+```typescript
+{
+  campaignId: string;              // Hash key
+  timestamp: number;               // Range key (Unix timestamp)
+  email: string;                   // Recipient email
+  recipient: string;               // Normalized recipient
+  eventType: string;               // "financial_send", "open", "click", etc.
+  sendStatus: "success" | "failed";
+  sesMessageId?: string;           // SES message ID
+  month: string;
+  year: string;
+  customIds: string[];
+  tags: string[];
+  provider: "SES";
+  expirationTime: number;          // TTL (90 days default)
+}
+```
+
+**Global Secondary Indexes**:
+- `EmailIndex` - Hash: `email`
+- `email-event-index` - Hash: `recipient`, Range: `timestamp`
+- `MonthYearIndex` - Hash: `month`, Range: `year`
+
+**TTL**: 90 days (configurable via `FINANCIAL_TRACKING_TTL_DAYS`)
+
+**Table**: Configured via `FINANCIAL_SUPPRESSION_TABLE` environment variable
+
+**Purpose**: Store bounced/complained email addresses
+
+**Schema**:
+```typescript
+{
+  email: string;                   // Hash key
+  reason: string;                  // "bounce" | "complaint"
+  timestamp: number;
+  expirationTime: number;          // TTL
+}
+```
+
+#### Environment Variables
+
+**Required Lambda Configuration**:
+```bash
+# S3 & CloudFront
+S3_BUCKET_NAME={your-s3-bucket-name}
+FINANCIAL_REPORTS_PREFIX=financial-reports
+CLOUDFRONT_DOMAIN_NAME={your-cloudfront-distribution}.cloudfront.net
+CLOUDFRONT_KEY_PAIR_ID={your-cloudfront-key-pair-id}
+CLOUDFRONT_PRIVATE_KEY_SECRET={secretsmanager-secret-name}
+
+# Firebase
+FIREBASE_PROJECT_ID={your-firebase-project-id}
+FIREBASE_SERVICE_ACCOUNT_SECRET={secretsmanager-path-to-firebase-creds}
+FIREBASE_DATABASE_URL=https://{your-firebase-project}.firebaseio.com
+
+# SES
+SES_SECRETS_MANAGER_SECRET_NAME={secretsmanager-path-to-ses-creds}
+SES_CONFIGURATION_SET={your-ses-configuration-set}
+SES_CONTACT_LIST_NAME={your-ses-contact-list}
+FINANCIAL_SES_RATE_LIMIT_MS=100
+
+# DynamoDB
+FINANCIAL_CAMPAIGN_TRACKING_TABLE={your-tracking-table-name}
+FINANCIAL_SUPPRESSION_TABLE={your-suppression-table-name}
+FINANCIAL_TRACKING_TTL_DAYS=90
+
+# Lambda Dependencies
+PAYOUTS_FETCH_LAMBDA_NAME={your-payouts-lambda-name}
+
+# Unsubscribe
+UNSUBSCRIBE_BASE_URL=https://{api-id}.execute-api.{region}.amazonaws.com/{stage}/financial/unsubscribe
+UNSUBSCRIBE_KMS_KEY_ID=alias/{your-kms-alias}
+UNSUBSCRIBE_CONFIRMATION_URL=https://{your-crm-domain}/unsubscribe/confirmation
+```
+
+#### Lambda Dependencies
+
+**Lambda Layers**:
+- `aws_sdk_nodejs20` - AWS SDK v3
+- `axios_node` - HTTP client
+- `financial-custom-layer` - Firebase Admin, CloudFront signer
+- `unsubscribe-utils-layer` - SES contact list utilities
+
+**Key NPM Packages**:
+```json
+{
+  "@aws-sdk/client-s3": "^3.x",
+  "@aws-sdk/client-secrets-manager": "^3.x",
+  "@aws-sdk/client-ses": "^3.x",
+  "@aws-sdk/client-lambda": "^3.x",
+  "@aws-sdk/cloudfront-signer": "^3.x",
+  "firebase-admin": "^11.x"
+}
+```
+
+#### Security Features
+
+**CloudFront Security**:
+- Private keys stored in AWS Secrets Manager
+- Origin Access Control (OAC) restricts S3 access to CloudFront only
+- HTTPS-only enforcement on all signed URLs
+- 25-day maximum URL expiration
+- Quarterly key rotation schedule
+
+**Authentication & Authorization**:
+- Firebase JWT token validation on all endpoints
+- Finance role requirement for sending reports
+- Rate limiting: 25 requests/minute per user
+- Request validation and XSS prevention
+
+**Email Security**:
+- SES contact list integration for opt-outs
+- Dual List-Unsubscribe headers (mailto + HTTPS)
+- Suppression list checking before sends
+- Encrypted unsubscribe tokens (KMS)
+
+#### Monitoring & Metrics
+
+**CloudWatch Metrics Tracked**:
+- Lambda invocation counts and success rates
+- Email delivery rates via SES
+- CloudFront cache hit rates and 4xx/5xx errors
+- DynamoDB read/write capacity usage
+- Authentication failures
+
+**Custom Metrics**:
+```typescript
+interface FinancialMailerMetrics {
+  emailsSent: number;
+  emailDeliveryRate: number;
+  averageResponseTime: number;
+  cloudfrontSignedUrlsGenerated: number;
+  s3PathResolutionSuccessRate: number;
+  errorRate: number;
+}
+```
+
+**Alerting Thresholds**:
+- Email delivery rate < 95%
+- Lambda error rate > 1%
+- CloudFront 4xx/5xx errors > 1%
+- Response time P95 > 5 seconds
+
+#### Deployment Configuration
+
+**Service Name**: Configurable (set in serverless.yml)  
+**Deployment Framework**: Serverless Framework  
+**Runtime**: Node.js 20.x  
+**Region**: Configurable per deployment  
+**Stage**: Configurable (dev/staging/prod)
+
+**Deployment Command**:
+```bash
+cd lambda/finance
+npm install
+serverless deploy --stage dev
+```
+
+**Post-Deployment Steps**:
+1. Configure Secrets Manager with CloudFront private key
+2. Set up SES contact list and configuration set
+3. Create DynamoDB tables with GSIs
+4. Configure CloudWatch alarms
+5. Update CRM frontend with API endpoint URLs
+
+#### Known Issues & Limitations
+
+**Legacy Structure Support**:
+- System currently checks 12+ S3 path variants for backward compatibility
+- Performance impact: ~100-200ms per custom ID resolution
+- **Recommendation**: Migrate all reports to new structure, deprecate legacy paths
+
+**Custom ID Mappings**:
+- Hardcoded special custom ID aliases in Lambda code
+- **Recommendation**: Move mappings to DynamoDB or Firestore for easier management
+
+**Equity Distribution**:
+- Hardcoded equity recipient emails in Lambda code
+- **Recommendation**: Store in environment variables or database
+
+**Rate Limiting**:
+- 100ms delay between sends = ~600 emails/minute maximum
+- Large campaigns may take significant time
+- **Recommendation**: Implement batch processing with SES SendBulkEmail API
+
+#### Documentation References
+
+**Related Documentation**:
+- [Data Flow Patterns](./data-flow-patterns.md#financial-mailer-flow) - Complete sequence diagrams
+- [CloudFront Signed URLs Implementation](./data-flow-patterns.md#cloudfront-security) - Security details
+- Complete technical report: `docs/FINANCIAL_MAILER_TECHNICAL_REPORT.md`
+
+**Key Files**:
+- Handler: `lambda/finance/src/handlers/` (financial report sender)
+- CloudFront Utils: `lambda/finance/src/utils/cloudfront.ts`
+- Payout Data: `lambda/finance/src/utils/payoutData.ts`
+- Infrastructure: `terraform/financial/main.tf`
+
+---
+
 ## Third-Party API Integrations
 
 ### Mailgun API Integration
