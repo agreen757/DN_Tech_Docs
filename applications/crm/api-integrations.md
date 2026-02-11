@@ -1976,6 +1976,379 @@ See [Data Flow Patterns](./data-flow-patterns.md#youtube-channel-search-flow) fo
 - `src/hooks/useYouTubeSearch.ts` - React hook with caching
 - `src/components/outreach/YouTubeSearchModal.tsx` - UI component
 
+### Korrect API Endpoints
+
+#### Overview
+The Korrect API provides access to DistroNation user data and payout information, enabling the CRM to retrieve user information, email lists for campaign targeting, and financial payout totals. These endpoints proxy authenticated calls to the external Korrect API system. This is the primary data source for email recipient management and financial reporting across outreach and financial mailer operations.
+
+**Note**: These endpoints handle authentication and communication with the external Korrect API. For detailed information about the underlying Korrect API integration, contact Distro Nation.
+
+**Base URL**: `https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging`  
+**Authentication**: API Key via `x-api-key` header  
+**Service**: DistroNation User Management & Payout Data  
+**Configuration Location**: `src/services/emailService.ts`, `src/components/mailer/MailerTemplate.tsx`, `src/components/newsletter/NewsletterForm_old.js`
+
+#### Primary Email Recipient Endpoint
+
+##### `/dn_users_list` - Fetch DistroNation Users
+**Method**: GET  
+**Purpose**: Retrieve list of active DistroNation users with email addresses for campaign targeting  
+**Used By**: Mailer Template, Newsletter Forms, Email Service  
+**Authentication**: Required (API Key in `x-api-key` header)
+
+**Request**:
+```bash
+GET https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_users_list
+x-api-key: {REACT_APP_DN_API_KEY}
+```
+
+**No Query Parameters Required**: Endpoint returns all users, filtering applied client-side
+
+**Response Structure**:
+```typescript
+interface UserAPIResponse {
+  statusCode: number;
+  body: EmailUser[];
+}
+
+interface EmailUser {
+  userName: string;              // Display name
+  status: string;                // Account status ("active", "inactive", etc.)
+  emailsUser: string;            // Primary email address
+  creators?: {                   // Optional nested creator/channel data
+    channels?: {
+      customID: string;          // Channel custom ID (links to reports)
+      channelName?: string;
+      platform?: string;         // "youtube", "spotify", etc.
+    }[];
+  }[];
+}
+```
+
+**Example Response**:
+```json
+{
+  "statusCode": 200,
+  "body": [
+    {
+      "userName": "Artist Name",
+      "status": "active",
+      "emailsUser": "artist@example.com",
+      "creators": [
+        {
+          "channels": [
+            {
+              "customID": "ARTISTID123",
+              "channelName": "Official Channel",
+              "platform": "youtube"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "userName": "Creator Two",
+      "status": "active",
+      "emailsUser": "creator2@example.com"
+    }
+  ]
+}
+```
+
+#### Client-Side Filtering Rules
+
+The CRM applies automatic filtering to the user list to ensure only valid recipients are included:
+
+**Filtering Criteria**:
+1. **Active Status Only**: `status === "active"`
+2. **Non-Empty Email**: `emailsUser !== null && emailsUser !== ""`
+3. **Hardcoded Exclusions**: 5 specific user emails excluded (internal test accounts)
+
+**Implementation** (`src/services/emailService.ts`):
+```typescript
+const EXCLUDED_EMAILS = [
+  'excluded1@example.com',
+  'excluded2@example.com',
+  'excluded3@example.com',
+  'excluded4@example.com',
+  'excluded5@example.com'
+];
+
+function filterValidRecipients(users: EmailUser[]): EmailUser[] {
+  return users.filter(user => 
+    user.status === 'active' &&
+    user.emailsUser &&
+    user.emailsUser.trim() !== '' &&
+    !EXCLUDED_EMAILS.includes(user.emailsUser.toLowerCase())
+  );
+}
+```
+
+#### Usage Patterns
+
+**Primary Use Cases**:
+
+1. **Financial Mailer Campaigns**:
+   - Fetch all active users
+   - Extract `customID` values from nested `creators.channels` structure
+   - Map customIDs to financial reports in S3
+   - Send personalized financial reports with CloudFront signed URLs
+
+2. **Outreach Campaigns**:
+   - Fetch all active users for bulk email campaigns
+   - Use `userName` for email personalization
+   - Target specific user segments based on creator/channel data
+
+3. **Newsletter Distribution**:
+   - Retrieve all valid email addresses
+   - Apply additional opt-in/opt-out filtering
+   - Send mass communications
+
+**Data Flow Example** (Financial Mailer):
+```
+1. GET /dn_users_list → Fetch all users
+2. Filter active users with valid emails
+3. Extract customIDs from creators.channels[]
+4. POST /financial/send-report with customIDs
+5. Lambda resolves customIDs → S3 report paths
+6. Generate CloudFront signed URLs for reports
+7. Send personalized emails with download links
+```
+
+#### Environment Configuration
+
+**Required Environment Variable**:
+```bash
+# .env file
+REACT_APP_DN_API_KEY=your-api-key-here
+```
+
+**API Configuration** (`src/config/api.config.ts`):
+```typescript
+export const dnApiConfig = {
+  baseUrl: 'https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging',
+  endpoints: {
+    usersList: '/dn_users_list',
+    sendMail: '/send-mail',
+    // ... other endpoints
+  },
+  headers: {
+    'x-api-key': process.env.REACT_APP_DN_API_KEY || '',
+    'Content-Type': 'application/json'
+  }
+};
+```
+
+#### Error Handling
+
+**HTTP Status Codes**:
+- `200` - Success, returns user list
+- `401` - Unauthorized (missing or invalid API key)
+- `403` - Forbidden (API key lacks permissions)
+- `500` - Internal server error
+- `503` - Service temporarily unavailable
+
+**Error Response Format**:
+```typescript
+interface ErrorResponse {
+  statusCode: number;
+  message: string;
+  error?: string;
+}
+```
+
+**Client-Side Error Handling**:
+```typescript
+try {
+  const response = await fetch(dnApiConfig.baseUrl + '/dn_users_list', {
+    headers: { 'x-api-key': dnApiConfig.headers['x-api-key'] }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+  
+  const data: UserAPIResponse = await response.json();
+  const validUsers = filterValidRecipients(data.body);
+  return validUsers;
+  
+} catch (error) {
+  console.error('Failed to fetch users:', error);
+  // Fallback: Use cached data or show user-friendly error
+  throw new Error('Unable to load recipient list. Please try again.');
+}
+```
+
+#### Data Privacy & Security
+
+**Sensitive Data Handling**:
+- Email addresses are PII (Personally Identifiable Information)
+- API key must never be exposed in client-side code (use environment variables only)
+- User data should be cached securely (memory only, never localStorage for PII)
+- Email lists must not be logged or exposed in error messages
+
+**API Key Security**:
+- Rotate API keys quarterly
+- Use separate keys for dev/staging/production
+- Monitor API usage for anomalies
+- Revoke compromised keys immediately
+
+**Compliance**:
+- GDPR: Users have right to access/delete their data
+- CAN-SPAM: All emails must include unsubscribe mechanism
+- SES Contact List: Respect opt-out preferences before sending
+
+#### Payout Totals Endpoint
+
+##### `/dn_payouts_fetch` - Fetch Payout Totals by Custom ID
+**Method**: POST  
+**Purpose**: Retrieve total payout amounts per custom ID for a specified time period  
+**Used By**: Financial Mailer, Payout Reports  
+**Authentication**: Required (API Key in `x-api-key` header)
+
+**Request**:
+```bash
+POST https://cjed05n28l.execute-api.us-east-1.amazonaws.com/staging/dn_payouts_fetch
+x-api-key: {REACT_APP_DN_API_KEY}
+Content-Type: application/json
+```
+
+**Request Payload**:
+```typescript
+interface PayoutFetchRequest {
+  payoutType: string;              // Type of payout to retrieve
+  startMonth: string;              // Start month (numeric "1"-"12" or name "January")
+  endMonth: string;                // End month (numeric "1"-"12" or name "December")
+  startYear: string;               // Start year (e.g., "2025")
+  endYear: string;                 // End year (e.g., "2025")
+  customIds: string[];             // Array of custom IDs to fetch payouts for
+}
+```
+
+**Example Request**:
+```json
+{
+  "payoutType": "youtube",
+  "startMonth": "12",
+  "endMonth": "12",
+  "startYear": "2025",
+  "endYear": "2025",
+  "customIds": ["DYLVN"]
+}
+```
+
+**Response Structure**:
+```typescript
+interface PayoutFetchResponse {
+  statusCode: number;
+  body: string;                    // JSON string of PayoutData[]
+}
+
+interface PayoutData {
+  customId: string;
+  payout: {
+    // Payout details from external API
+    [key: string]: any;
+  };
+}
+```
+
+**Example Response** (DYLVN, December 2025):
+```json
+{
+  "statusCode": 200,
+  "body": "[{\"customId\":\"DYLVN\",\"payout\":[{\"contractCode\":\"ART001-DYLVN\",\"yearPart\":2025,\"monthPart\":12,\"openingBal\":1250.00,\"paymentsAll\":-1250.00,\"performanceRoy\":0.0,\"subscriptionRoy\":0.0,\"paidFeatures\":0.0,\"royEarnings\":450.50,\"pubEarnings\":0.0,\"recoupables\":0.0,\"periodBal\":-799.50,\"totalBal\":450.50,\"royaltyPeriod\":202512,\"totalViews\":3500.0,\"totalUnits\":0.0,\"totalRows\":0,\"totalGross\":500.55,\"shortsEarnings\":0.0},{\"contractCode\":\"YT-DYLVN-0001\",\"yearPart\":2025,\"monthPart\":12,\"openingBal\":980.00,\"paymentsAll\":-980.00,\"performanceRoy\":125.75,\"subscriptionRoy\":320.25,\"paidFeatures\":0.0,\"royEarnings\":0.0,\"pubEarnings\":0.0,\"recoupables\":0.0,\"periodBal\":-534.00,\"totalBal\":446.00,\"royaltyPeriod\":202512,\"totalViews\":52000.0,\"totalUnits\":0.0,\"totalRows\":0,\"totalGross\":496.00,\"shortsEarnings\":0.0}]}]"
+}
+```
+
+**Formatted Response Example** (easier to read):
+```json
+{
+  "statusCode": 200,
+  "body": [
+    {
+      "customId": "DYLVN",
+      "payout": [
+        {
+          "contractCode": "ART001-DYLVN",
+          "yearPart": 2025,
+          "monthPart": 12,
+          "openingBal": 1250.00,
+          "paymentsAll": -1250.00,
+          "performanceRoy": 0.0,
+          "subscriptionRoy": 0.0,
+          "paidFeatures": 0.0,
+          "royEarnings": 450.50,
+          "pubEarnings": 0.0,
+          "recoupables": 0.0,
+          "periodBal": -799.50,
+          "totalBal": 450.50,
+          "royaltyPeriod": 202512,
+          "totalViews": 3500.0,
+          "shortsEarnings": 0.0
+        },
+        {
+          "contractCode": "YT-DYLVN-0001",
+          "yearPart": 2025,
+          "monthPart": 12,
+          "openingBal": 980.00,
+          "paymentsAll": -980.00,
+          "performanceRoy": 125.75,
+          "subscriptionRoy": 320.25,
+          "paidFeatures": 0.0,
+          "royEarnings": 0.0,
+          "pubEarnings": 0.0,
+          "recoupables": 0.0,
+          "periodBal": -534.00,
+          "totalBal": 446.00,
+          "royaltyPeriod": 202512,
+          "totalViews": 52000.0,
+          "shortsEarnings": 0.0
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Special Custom ID Mappings**:
+The Lambda function applies automatic custom ID transformations:
+- `MOLS` → `MOL`
+- `JODYHIGHROLLER` → `RIFFRAFF`
+
+**Backend Integration**:
+- Authenticates with external Korrect API (`lne.onkorrect.com`)
+- Fetches payout data per custom ID for specified date range
+- Returns aggregated payout totals
+
+**Month Format Support**:
+Accepts both numeric (`"1"`, `"12"`) and text formats (`"January"`, `"December"`) for month parameters.
+
+#### Related Endpoints & Integrations
+
+**Downstream Dependencies**:
+1. **Financial Mailer API** (`/financial/send-report`):
+   - Uses customIDs extracted from user list
+   - Maps customIDs to S3 financial reports
+   - Sends personalized financial emails
+
+2. **Outreach API** (`/outreach/send-email`):
+   - Uses email addresses from user list
+   - Sends bulk outreach campaigns
+   - Tracks email engagement metrics
+
+3. **SES Contact List Integration**:
+   - Cross-references with SES contact list for opt-out status
+   - Ensures compliance with unsubscribe requests
+   - Syncs user preferences bidirectionally
+
+**Related Documentation**:
+- [Financial Mailer API Integration](#financial-mailer-api-integration-new) - Custom ID to report mapping
+- [Outreach API Integration](#outreach-api-integration-new) - Email campaign execution
+- [Data Flow Patterns](./data-flow-patterns.md#email-recipient-flow) - Complete sequence diagrams
+
+---
+
 ## Security Considerations
 
 ### Outreach API Security (NEW)
