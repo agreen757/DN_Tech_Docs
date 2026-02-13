@@ -8,6 +8,7 @@ This section provides documentation for all applications in the ecosystem.
    :caption: Application Categories:
 
    backend-operations/index
+   catalog-tool/index
    crm/index
    fuga-wav-uploader/index
    youtube-cms/index
