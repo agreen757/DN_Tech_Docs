@@ -593,13 +593,14 @@ Risk Mitigation Achieved:
 
 #### 2. YouTube CMS Metadata Management Tool (Catalog Tool)
 
-**Current Status:** 75% complete (15/20 tasks done) - As of February 5, 2026
+**Current Status:** Active Development (Report-Selection Feature) - As of February 12, 2026
 
 **Purpose and Scope**
 
-- **Primary Function**: Centralized metadata management for YouTube Content Management System
-- **Business Impact**: Essential for content monetization and copyright management
+- **Primary Function**: Centralized metadata management for YouTube Content Management System with local Docker-based testing infrastructure
+- **Business Impact**: Essential for content monetization, copyright management, and bulk metadata operations
 - **User Base**: Content management team and media operations staff
+- **Project Location**: `~/Work/VideoClaimClassifier2/`
 
 **Technical Architecture**
 
@@ -607,200 +608,238 @@ Risk Mitigation Achieved:
 Backend Technology:
   Runtime: Python 3.8+
   Framework: Flask 2.x with SQLAlchemy ORM
-  Database: PostgreSQL with advanced features (arrays, JSON columns)
-  Real-time: Flask-SocketIO for WebSocket communication
+  Database: PostgreSQL 14 with advanced features (arrays, JSON columns)
+  Testing: Pytest with Docker-based test infrastructure
   Migration: Flask-Migrate with Alembic versioning
 
-External Integrations:
-  YouTube Data API v3: Video metadata retrieval and updates
-  YouTube CMS API: Content management and monetization control
-  AWS S3: Report storage and backup operations
-  Real-time Updates: WebSocket-based client notifications
+Test Environment Setup:
+  Containerization: Docker Compose for full stack testing
+  PostgreSQL: Version 14 with dedicated test database
+  Web Service: Flask development server in container
+  Database URL (Test): postgresql://[DB_USER]:[DB_PASSWORD]@db:5432/video_claim_classifier_test
+
+Configuration Management:
+  Base Config: config.py with environment-based setup
+  Test Configuration: TestConfig with StaticPool connection pooling
+  Database Connection: StaticPool (prevents connection reuse between tests)
+  Connection Validation: pool_pre_ping=True (validates connections before use)
 
 Key Features:
   Bulk Metadata Processing: CSV import with validation and transformation
   YouTube API Sync: Bidirectional synchronization with YouTube platform
   Advanced Search: Multi-criteria filtering with real-time results
   Report Processing: Automated S3 report ingestion and analysis
-  Admin Dashboard: Content ownership and monetization tracking
+  Local Testing: Docker-based test infrastructure with automated database management
 ```
 
-**Current Implementation Status (Updated February 5, 2026)**
+**Local Docker Testing Setup**
 
-**Overall Project Completion: 75% (15/20 tasks complete)**
+The Catalog Tool includes a comprehensive local testing infrastructure using Docker Compose for development and quality assurance. This section covers setup, configuration, and test execution.
 
-**Task Breakdown by Status:**
-- ✅ Done: 15 tasks
-- ⏸️ Pending: 5 tasks
-- 🚧 In Progress: 0 tasks
-- 🔍 Review: 0 tasks
-- 🚫 Blocked: 1 task (Task #20 - waiting on #16, #17, #18, #19)
+**Prerequisites:**
+- Docker and Docker Compose installed
+- Python 3.8+ (via Docker image)
+- PostgreSQL 14 (via Docker container)
+- Test requirements installed via `requirements-test.txt`
 
-**Priority Distribution:**
-- High Priority: 9 tasks (7 complete, 2 remaining: #16, #20)
-- Medium Priority: 11 tasks (8 complete, 3 remaining: #17, #18, #19)
-- Low Priority: 0 tasks
+**Docker Compose Configuration:**
 
-**Ready Tasks (4 tasks ready to work on):**
-1. **Task #16 - Test Automated Pause/Resume Functionality** (HIGH priority, Complexity 6)
-   - Dependencies: Tasks #12, #13 (both complete)
-   - Blocks: Task #20
+```yaml
+services:
+  web:
+    build: .
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - TEST_DATABASE_URL=${TEST_DATABASE_URL}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - CUSTOM_AWS_ACCESS_KEY=${CUSTOM_AWS_ACCESS_KEY}
+      - CUSTOM_AWS_SECRET_KEY=${CUSTOM_AWS_SECRET_KEY}
+      - FLASK_APP=application.py
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=video_claim_classifier_test
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+```
 
-2. **Task #17 - Create Monitoring Dashboard** (MEDIUM priority, Complexity 5)
-   - Dependencies: Task #15 (complete)
-   - Blocks: Task #20
+**PostgreSQL Test Database Configuration:**
 
-3. **Task #18 - Implement Rollback Procedure** (MEDIUM priority, Complexity 6)
-   - Dependencies: Task #14 (complete)
-   - Blocks: Task #20
+The test environment uses PostgreSQL 14 with optimized connection pooling configuration:
 
-4. **Task #19 - Performance Testing and Optimization** (MEDIUM priority, Complexity 9)
-   - Dependencies: Task #14 (complete)
-   - Blocks: Task #20
+```python
+# config.py - TestConfig
+from sqlalchemy.pool import StaticPool
 
-**Blocked Tasks:**
-- Task #20 - Final Validation and Go-Live (HIGH priority)
-  - Waiting on: Tasks #16, #17, #18, #19
-  - Final validation before production deployment
+class TestConfig(Config):
+    """Test configuration with optimized database connection pooling.
+    
+    NOTE: Database credentials should be configured via environment variables or .env files,
+    never hardcoded in code. Use TEST_DATABASE_URL environment variable with format:
+    postgresql://[DB_USER]:[DB_PASSWORD]@db:5432/video_claim_classifier_test
+    """
+    DEBUG = True
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'TEST_DATABASE_URL',
+        f"postgresql://{os.environ.get('DB_USER', 'postgres')}:{os.environ.get('DB_PASSWORD', 'defaultpassword')}@db:5432/video_claim_classifier_test"
+    )
+    # SQLAlchemy engine options for test database
+    # Use StaticPool to avoid connection reuse between tests
+    # Use pool_pre_ping=True to validate connections before use
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'poolclass': StaticPool,
+        'pool_pre_ping': True,
+    }
+```
 
-**Project Phase:** Final testing and validation phase
-- All infrastructure tasks complete ✅
-- Remaining work is primarily testing, monitoring, and validation
-- No critical blockers or issues detected
+**Connection Pool Configuration Details:**
 
-**Integration Points**
+- **StaticPool**: Prevents connection reuse between tests, ensuring each test receives a fresh database connection. This eliminates cross-test contamination and stale connection errors.
+- **pool_pre_ping=True**: Validates each connection before use by executing a simple query. This ensures all connections are healthy and detects dead connections that may have been closed by the server.
+- **Session Cleanup**: Test fixtures call `db.session.remove()` and `db.engine.dispose()` to properly clean up database state between test runs.
+
+**⚠️ SECURITY BEST PRACTICE: Environment Variable Configuration**
+
+Database credentials **must never be hardcoded** in application code, configuration files, or documentation. Instead, use environment variables or `.env` files:
+
+```bash
+# .env file (local development only, never commit to version control)
+DB_USER=testuser
+DB_PASSWORD=your_secure_password_here
+TEST_DATABASE_URL=postgresql://testuser:your_secure_password_here@db:5432/video_claim_classifier_test
+```
+
+Or set environment variables in your deployment:
+
+```bash
+export DB_USER=testuser
+export DB_PASSWORD=your_secure_password_here
+export TEST_DATABASE_URL=postgresql://testuser:your_secure_password_here@db:5432/video_claim_classifier_test
+```
+
+**Never use default credentials in production.** Always use strong, randomly-generated passwords managed through:
+- Environment variables
+- AWS Secrets Manager
+- HashiCorp Vault
+- Other secure credential management systems
+
+**Fresh Test Database Setup:**
+
+Execute these commands to create a clean test database:
+
+```bash
+# Start Docker Compose services
+docker-compose up -d
+
+# Drop existing test database if present
+docker-compose exec db psql -U postgres -c "DROP DATABASE IF EXISTS video_claim_classifier_test;"
+
+# Create fresh test database
+docker-compose exec db psql -U postgres -c "CREATE DATABASE video_claim_classifier_test;"
+```
+
+**Working Docker Test Commands:**
+
+**Single Test Execution:**
+```bash
+docker-compose run --rm \
+  -e FLASK_ENV=test \
+  -e CUSTOM_AWS_ACCESS_KEY=dummy \
+  -e CUSTOM_AWS_SECRET_KEY=dummy \
+  web bash -c "pip install -r requirements-test.txt && \
+  python -m pytest tests/test_api_endpoints.py::TestVideosAPIEndpoint::test_endpoint_exists -v"
+```
+
+This command:
+- Runs in isolated container with `--rm` flag
+- Sets Flask environment to `test` mode
+- Provides dummy AWS credentials (required for environment setup)
+- Installs test dependencies from `requirements-test.txt`
+- Executes specific test method with verbose output
+- Automatically cleans up container after completion
+
+**All Tests Execution:**
+```bash
+docker-compose run --rm \
+  -e FLASK_ENV=test \
+  -e CUSTOM_AWS_ACCESS_KEY=dummy \
+  -e CUSTOM_AWS_SECRET_KEY=dummy \
+  web bash -c "pip install -r requirements-test.txt && \
+  python -m pytest tests/test_api_endpoints.py -v"
+```
+
+This command:
+- Runs complete test suite in `test_api_endpoints.py`
+- Includes all test classes and methods
+- Generates verbose output with test results
+- Reports pass/fail status with execution timing
+- Validates all API endpoints and integration points
+
+**Test Database Lifecycle:**
+
+1. **Setup Phase (Fixture Setup)**
+   - Remove any lingering session: `db.session.remove()`
+   - Dispose all pooled connections: `db.engine.dispose()`
+   - Drop existing tables: `db.drop_all()`
+   - Create fresh tables from schema: `db.create_all()`
+   - Insert test data into database
+   - Yield test client for test execution
+
+2. **Test Execution**
+   - Test runs with fresh, isolated database state
+   - StaticPool ensures no connection reuse across tests
+   - pool_pre_ping validates each connection before use
+   - Tests are fully isolated from each other
+
+3. **Teardown Phase (Fixture Cleanup)**
+   - Remove session from registry: `db.session.remove()`
+   - Dispose all pooled connections: `db.engine.dispose()`
+   - Clean up resources and close connections
+
+**Test Results Summary:**
+
+The test suite validates:
+- ✅ API endpoint availability and correct HTTP methods
+- ✅ JSON response format and structure
+- ✅ Pagination parameters (page, page_size, sort)
+- ✅ Filtering and search functionality
+- ✅ Response time performance (<2s per test)
+- ✅ Concurrent request handling
+- ✅ Data structure validation
+- ✅ Error handling for invalid inputs
+
+**Expected Test Output:**
+```
+tests/test_api_endpoints.py::TestVideosAPIEndpoint::test_endpoint_exists PASSED [ 20%]
+tests/test_api_endpoints.py::TestVideosAPIEndpoint::test_returns_json PASSED        [ 40%]
+tests/test_api_endpoints.py::TestVideosAPIEndpoint::test_response_structure PASSED [ 60%]
+...
+================ 20 passed in 5.53s ================
+```
+
+**Integration Points:**
 
 - **dn-api Integration**: Notification endpoints for sync status and error reporting
 - **AWS S3 Integration**: Report file processing and storage workflows
 - **YouTube APIs**: Comprehensive metadata synchronization and content management
-- **Database Integration**: Advanced PostgreSQL features with Aurora compatibility
-- **Real-time Communication**: WebSocket integration for live updates
+- **PostgreSQL Integration**: Advanced database features with proper connection pooling
+- **Docker Infrastructure**: Complete local development and testing environment
 
-**Migration Considerations**
+**For Detailed Configuration:**
 
-🚀 **AWS App Runner Migration - IN PROGRESS (Q1 2026)**
+See `~/Work/VideoClaimClassifier2/POSTGRES_TEST_DATABASE_SETUP.md` for comprehensive documentation on:
+- PostgreSQL connection pool configuration and rationale
+- Test fixture setup and teardown procedures
+- Database cleanup and isolation strategies
+- Troubleshooting connection pool errors
+- Performance benchmarking and optimization
 
-**Strategic Initiative**: Migrate YouTube CMS Metadata Tool (Catalog Tool) from current hosting to AWS App Runner with automated cost optimization
+**Current Implementation Status (Updated February 12, 2026)**
 
-**Current Status:** 75% complete (15/20 tasks done) - As of February 5, 2026
-- **Planning Complete**: ✅ PRD created (February 4, 2026)
-- **Task Analysis**: ✅ Complexity assessment complete (2 high, 14 medium, 4 low complexity tasks)
-- **Cost Analysis**: ✅ Target monthly cost: ~$66/month with automated pause scheduling
-- **Infrastructure & Database**: ✅ Week 1 & 2 tasks complete (Tasks #1-#15)
-- **Testing & Validation**: 📋 Week 3 in progress (Tasks #16-#20)
-- **Implementation Timeline**: 3-week timeline (Week 3 current phase)
+**Development Focus**: Active development with report-selection feature
 
-**Migration Architecture**:
-```yaml
-Target Deployment: AWS App Runner (Containerized Flask Application)
-  Container Source: Amazon ECR (Elastic Container Registry)
-  Instance Configuration: 1 vCPU, 2 GB RAM
-  Auto-scaling: 1-2 instances based on traffic
-  Health Check: /health endpoint with 5-second intervals
-  
-Database: AWS RDS PostgreSQL
-  Instance Type: db.t3.micro (expandable)
-  Storage: 20 GB GP3 with automated backups
-  Network: Private subnet with VPC connector from App Runner
-  Backup Retention: 7 days automated snapshots
-
-Cost Optimization: Automated Pause/Resume Schedule
-  Pause Time: 2:00 AM EST daily (off-hours)
-  Resume Time: 6:00 AM EST daily (business hours start)
-  Mechanism: EventBridge rules → Lambda function → App Runner API
-  Monthly Savings: ~$8/month vs. 24/7 operation
-  Annual Savings: ~$96/year from intelligent scheduling
-
-Networking & Security:
-  VPC Connector: Secure private communication with RDS
-  Security Groups: Restrictive inbound/outbound rules
-  Secrets Manager: All credentials stored securely
-  IAM Roles: Least-privilege access for App Runner and Lambda
-
-Monitoring & Operations:
-  CloudWatch Metrics: CPU, memory, request count, HTTP status codes
-  CloudWatch Alarms: Health check failures, RDS performance, Lambda errors
-  Dashboard: Unified monitoring for App Runner, RDS, and automation
-  Logging: Centralized CloudWatch Logs with retention policies
-```
-
-**Migration Phases** (3-week timeline):
-
-**Week 1: Infrastructure & Database Migration** ✅ COMPLETED
-- ✅ Create AWS RDS PostgreSQL instance with proper security configuration
-- ✅ Configure VPC, security groups, and network connectivity
-- ✅ Set up AWS Secrets Manager for credential management
-- ✅ Export existing PostgreSQL database and migrate to RDS
-- ✅ Run Alembic migrations to ensure schema compatibility
-- ✅ Optimize Dockerfile for App Runner deployment
-- ✅ Create ECR repository and push initial container image
-
-**Week 2: App Runner Deployment & Automation** ✅ COMPLETED
-- ✅ Create App Runner service with VPC connector
-- ✅ Configure environment variables and secrets integration
-- ✅ Implement /health endpoint for App Runner health checks
-- ✅ Create Lambda function for pause/resume automation
-- ✅ Set up EventBridge rules for daily schedule (2 AM pause, 6 AM resume)
-- ✅ Configure IAM roles and policies for least-privilege access
-- ✅ Test automated pause/resume functionality (Task #16 - Ready)
-
-**Week 3: Testing, Monitoring & Go-Live** 🔄 IN PROGRESS (Tasks #16-#20)
-- 📋 Task #16: Test Automated Pause/Resume Functionality (HIGH priority, Ready)
-- 📋 Task #17: Create Monitoring Dashboard (MEDIUM priority, Ready)
-- 📋 Task #18: Implement Rollback Procedure (MEDIUM priority, Ready)
-- 📋 Task #19: Performance Testing and Optimization (MEDIUM priority, Ready)
-- 🚫 Task #20: Final Validation and Go-Live (HIGH priority, Blocked - awaiting #16-#19)
-
-**Technical Benefits**:
-- **Simplified Deployment**: Docker-based deployment with automatic scaling
-- **Zero Server Management**: Fully managed infrastructure by AWS
-- **Cost Efficiency**: Intelligent pause scheduling reduces costs by ~12% monthly
-- **High Availability**: Auto-scaling and health monitoring built-in
-- **Unified AWS Stack**: Complete integration with existing AWS infrastructure
-- **Improved Monitoring**: Native CloudWatch integration for observability
-
-**Business Impact**:
-- **Zero Downtime**: Application available during all business hours (6 AM - 2 AM EST)
-- **Cost Predictability**: Fixed monthly costs with transparent pricing
-- **Operational Efficiency**: Automated infrastructure management
-- **Scalability**: Easy to scale up resources as usage grows
-- **Disaster Recovery**: RDS automated backups and point-in-time recovery
-
-**Migration Risks & Mitigations**:
-```yaml
-Risk: Database migration failure
-  Mitigation: Full backup before migration, test migration on staging first,
-              validate data integrity post-migration
-
-Risk: App Runner cold start delays after resume
-  Mitigation: Health check warming via Lambda, optimize Docker image size,
-              consider always-on if cold starts problematic
-
-Risk: WebSocket connection stability
-  Mitigation: Flask-SocketIO automatic reconnection, monitor connection metrics,
-              test WebSocket under App Runner environment
-
-Risk: Pause during active user session
-  Mitigation: Schedule pause at 2 AM (minimal traffic), log active sessions,
-              implement graceful shutdown warnings (future enhancement)
-
-Risk: Cost overruns from unexpected traffic
-  Mitigation: AWS Budget alerts ($70 threshold), CloudWatch alarms for traffic spikes,
-              daily spend monitoring in Cost Explorer
-```
-
-**Documentation Deliverables**:
-- ✅ Migration PRD: Comprehensive 21KB planning document
-- 📋 Deployment Guide: Step-by-step deployment instructions
-- 📋 Architecture Diagram: Visual infrastructure representation
-- 📋 Operations Runbook: Daily procedures and incident response
-- 📋 Cost Tracking: Monthly breakdown and optimization opportunities
-
-**Legacy Migration Considerations** (Post-App Runner):
-- **Database Migration**: PostgreSQL → Aurora PostgreSQL (future consolidation opportunity)
-- **API Rate Limiting**: YouTube API quota management during high-volume operations
-- **S3 Integration**: Seamless integration with existing S3 infrastructure (already working)
-- **Real-time Features**: WebSocket server consolidation with existing infrastructure
+The Catalog Tool maintains active development with focus on feature expansion and testing infrastructure reliability. Core testing infrastructure is production-ready with reliable database isolation and connection management.
 
 ### Application Integration Strategy
 
