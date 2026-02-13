@@ -74,9 +74,23 @@
 | distronation-audit-unsubscribe | SES unsubscribe audit log | Receives structured events (operation, topic, source IP, token timestamp) from unsubscribe/add-contact/mailto handlers |
 | campaign_tracking | Outreach analytics | Stores outreach campaign stats and feeds CRM dashboards |
 
+## Application Services
+
+### Catalog Tool (YouTube CMS)
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Application** | Flask 3.x (Python 3.11+) | YouTube video metadata management and content claims processing |
+| **Database** | PostgreSQL (self-hosted or RDS Aurora) | Video catalog, channels, users, metadata sync audit trail |
+| **Authentication** | Flask-Security + Firebase OAuth2 | Hybrid auth supporting username/password and social login |
+| **Real-time** | Socket.IO (WebSockets) | Live report processing status updates and queue notifications |
+| **Storage** | S3 (youtube-reporting-main) | YouTube CSV report storage and processing |
+| **API Integration** | YouTube Partner API v3 | Metadata enrichment (UPC, ISRC, genres), ownership sync |
+| **Background Processing** | Python threading + custom queue processor | Async CSV processing, metadata sync, rate limiting (9500 req/day) |
+| **Key Features** | - Video catalog management (100,000+ videos)<br>- Advanced search/filtering<br>- CSV report import from S3<br>- Metadata sync with audit trail<br>- Monetization settings management<br>- Role-based access control (admin/user) | Multi-channel YouTube content management |
+
 ## Storage Resources
 
-### S3 Buckets (Key Buckets - 23 total)
+### S3 Buckets (Key Buckets - 24 total)
 | Bucket Name | Created | Purpose |
 |-------------|---------|---------|
 | distronation-audio | 2024-02-22 | Audio file storage |
@@ -85,6 +99,7 @@
 | distro-nation-upload | 2025-04-09 | File uploads |
 | distrofmb1ec38f05cba40828e65a98e039c6de4db8f9-main | 2024-05-20 | DistroFM main files |
 | distronationfm-profile-pictures | 2024-05-10 | User profile images |
+| youtube-reporting-main | N/A | Catalog Tool - YouTube CSV report storage |
 | amplify-* (multiple) | Various | Amplify deployments |
 
 ## Network Resources
@@ -122,10 +137,11 @@
 ### Primary Data Flow
 1. **Users** → CloudFront CDN → Application Load Balancer → EC2 instances
 2. **API Requests** → API Gateway → Lambda Functions → Aurora PostgreSQL
-3. **File Storage** → S3 Buckets (audio, uploads, profiles, backups)
+3. **File Storage** → S3 Buckets (audio, uploads, profiles, backups, YouTube reports)
 4. **External Integrations** → YouTube, Spotify, TikTok APIs via Lambda
 5. **Batch Processing** → EventBridge → ECS Fargate Tasks → Aurora PostgreSQL
 6. **Long-running Tasks** → ECS Cluster → Container processing → S3/Database
+7. **Catalog Tool** → Flask App → PostgreSQL → S3 (youtube-reporting-main) → YouTube Partner API
 
 ### Key Patterns
 - **Hybrid serverless architecture** with Lambda for APIs and ECS for long-running tasks
@@ -135,3 +151,4 @@
 - **PostgreSQL Aurora** as primary database with serverless scaling
 - **Event-driven processing** using EventBridge for workflow orchestration
 - **Containerized batch processing** for tasks exceeding Lambda timeout limits
+- **Flask-based application services** for specialized workflows (Catalog Tool: YouTube CMS with WebSocket real-time updates, S3 report processing, and YouTube Partner API integration)

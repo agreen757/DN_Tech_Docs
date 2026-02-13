@@ -15,12 +15,15 @@ The Distro Nation infrastructure operates as a hybrid cloud architecture, levera
   - **Technology**: React 18, TypeScript, Material-UI
   - **Authentication**: Firebase Auth + AWS Cognito
   - **Deployment**: Firebase Hosting with CloudFront CDN
-- **YouTube CMS Metadata Tool**: Flask-based Python web application for content metadata management
-  - **Technology**: Python 3.11+, Flask with Blueprint architecture, PostgreSQL, Marshmallow validation
-  - **Authentication**: Hybrid Flask-Security/Firebase system with password recovery and Argon2 hashing
-  - **Architecture**: Modular blueprint structure with centralized error handling and input validation
-  - **Deployment**: WSGI-compatible with comprehensive environment validation
-  - **Integration**: Real-time WebSocket connections, AWS S3 report processing, structured logging
+- **YouTube CMS Metadata Tool** (formerly VideoClaimClassifier2): A Flask-based Python web application for comprehensive YouTube content metadata management, content claiming, monetization tracking, and multi-report ingestion.
+  - **Technology**: Python 3.11+, Flask with Blueprint architecture, PostgreSQL, Marshmallow validation.
+  - **Authentication**: Hybrid Flask-Security/Firebase system with password recovery and Argon2 hashing.
+  - **Architecture**: Modular blueprint structure with centralized error handling and input validation.
+  - **Deployment**: Containerized and deployed on AWS App Runner, with Docker images stored in Amazon ECR. The application is run via `gunicorn --worker-class eventlet -w 1 main:app` inside the container, listening on port 8080, with a `/health` endpoint for health checks. AWS Amplify is used for orchestrating deployments.
+  - **Database**: PostgreSQL as the primary database, utilizing SQLAlchemy ORM with Alembic for migrations. Supports array fields and JSONB storage for flexible metadata. Automated daily backups with compression and retention policies are in place. Configured via `DATABASE_URL` environment variable.
+  - **File Storage (AWS S3)**: Utilized for secure report storage and processing, with IAM-based access control. Features include signed URLs for direct S3 uploads, automatic report backups, lifecycle management, and batch downloads with integrity checks. Configured via `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, and `S3_BUCKET_NAME` environment variables.
+  - **Multi-Report Ingestion**: The system supports ingestion of various YouTube reporting CSV files (Content Owner Video Metadata, Revenue, Content Claims). The processing pipeline involves secure file upload, automatic format detection, advanced CSV parsing with error handling, data validation, efficient bulk database import, and real-time synchronization. Report processing is handled by a sophisticated background queue system with priority queuing, rate limiting, retry logic, error recovery, and real-time progress tracking via WebSockets. API endpoints (`/api/reports/upload`, `/api/reports/{report_id}/status`) are provided for file upload and status monitoring.
+  - **Integration**: Real-time WebSocket connections, AWS S3 report processing, structured logging.
 - **API Clients**: Access through AWS API Gateway
 
 ### Authentication & Authorization
