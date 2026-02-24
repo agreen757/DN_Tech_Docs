@@ -1,6 +1,6 @@
 # Technical Roadmap: System Consolidation Timeline and Migration Strategies
 
-**Last Updated:** February 5, 2026
+**Last Updated:** February 24, 2026
 
 ## Executive Summary
 
@@ -835,11 +835,155 @@ See `~/Work/VideoClaimClassifier2/POSTGRES_TEST_DATABASE_SETUP.md` for comprehen
 - Troubleshooting connection pool errors
 - Performance benchmarking and optimization
 
-**Current Implementation Status (Updated February 12, 2026)**
+**Current Implementation Status (Updated February 17, 2026)**
 
-**Development Focus**: Active development with report-selection feature
+**Development Focus**: Frontend Refactor (Phase 1 In Progress) & Report-Selection Feature
 
-The Catalog Tool maintains active development with focus on feature expansion and testing infrastructure reliability. Core testing infrastructure is production-ready with reliable database isolation and connection management.
+The Catalog Tool maintains active development, with a significant focus on a comprehensive frontend refactor to improve maintainability and resolve file conflicts. Core testing infrastructure is production-ready with reliable database isolation and connection management.
+
+### Frontend JavaScript Refactoring Plan
+
+**Purpose:** Consolidate and restructure frontend JavaScript for better maintainability and documentation, moving from a monolithic 6,299-line codebase to an organized, layered architecture. This refactor aims to eliminate file conflicts, reduce coupling, and improve developer onboarding.
+
+**Problems with Current Structure:**
+
+```yaml
+Problems:
+  - Bloated Core Modules: `events.js` (1,185 lines) and `catalog.js` (1,077 lines) mix concerns.
+  - Unclear Boundaries: Overlapping responsibilities between UI modules (`ui.js` vs `ui-components.js`).
+  - Circular Dependencies: Critical services like `api.js` and `events.js` have circular imports.
+  - Missing Organization: Lack of domain-driven structure, making code navigation difficult.
+```
+
+**Proposed New Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         HTML Pages                               │
+│                    (templates/index.html)                        │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                    ┌────▼────┐
+                    │ app.js  │  ← Main entry point
+                    └────┬────┘
+                         │
+    ┌────────────────────┼────────────────────┐
+    │                    │                    │
+┌───▼────────┐    ┌──────▼───────┐    ┌──────▼──────┐
+│ PAGES      │    │ PAGES        │    │ PAGES       │
+│ catalog-   │    │ reports-     │    │ (future)    │
+│ page.js    │    │ page.js      │    │             │
+└───┬────────┘    └──────┬───────┘    └─────────────┘
+    │                    │
+    └────────┬───────────┘
+             │
+        ┌────▼────────────────────────────────┐
+        │         FEATURES                    │
+        │  ┌─────────────┐  ┌──────────────┐ │
+        │  │ catalog/    │  │ reports/     │ │
+        │  │ - tabs      │  │ - table      │ │
+        │  │ - videos    │  │ - processor  │ │
+        │  │ - assets    │  │ - history    │ │
+        │  │ - filters   │  │              │ │
+        │  └─────┬───────┘  └──────┬───────┘ │
+        └────────┼──────────────────┼─────────┘
+                 │                  │
+        ┌────────▼──────────────────▼─────────┐
+        │         COMPONENTS                   │
+        │  ┌─────────┐  ┌──────┐  ┌────────┐ │
+        │  │ table/  │  │forms/│  │  ui/   │ │
+        │  │ - data  │  │filter│  │ toast  │ │
+        │  │ - cols  │  │ bulk │  │ modal  │ │
+        │  │ - pag   │  │      │  │sidebar │ │
+        │  └────┬────┘  └──┬───┘  └───┬────┘ │
+        └───────┼──────────┼──────────┼──────┘
+                │          │          │
+        ┌───────▼──────────▼──────────▼──────┐
+        │         SERVICES                    │
+        │  ┌────────────┐  ┌──────────────┐  │
+        │  │ videos.    │  │ assets.      │  │
+        │  │ service.js │  │ service.js   │  │
+        │  ├────────────┤  ├──────────────┤  │
+        │  │ reports.   │  │ sync.        │  │
+        │  │ service.js │  │ service.js   │  │
+        │  └─────┬──────┘  └──────┬───────┘  │
+        └────────┼─────────────────┼──────────┘
+                 │                 │
+        ┌────────▼─────────────────▼──────────┐
+        │            CORE                      │
+        │  ┌───────────┐  ┌────────────────┐  │
+        │  │api-client │  │ dom-utils      │  │
+        │  │storage    │  │ utils          │  │
+        │  └───────────┘  └────────────────┘  │
+        └──────────────────────────────────────┘
+```
+
+**Module Responsibility Matrix:**
+
+```yaml
+Module Matrix:
+  - Core: Framework-agnostic utilities (api-client.js, utils.js, storage.js, dom-utils.js)
+  - Services: Business logic, API calls, data transformations (videos.service.js, auth.service.js, etc.)
+  - Components: Reusable UI pieces with no business logic (data-table.js, toast.js, modal.js, etc.)
+  - Features: Domain-specific orchestration, feature logic (videos-tab.js, report-processor.js, etc.)
+  - Pages: Thin controllers, initialize features (catalog-page.js, reports-page.js)
+```
+
+**Migration Strategy (5 Phases):**
+
+```yaml
+Migration Plan:
+  - Phase 1: Core Infrastructure (Low Risk, 2-3 hours) - Extract utilities and services (Auth, Videos, Assets, Reports, Sync).
+    - Current Status: IN PROGRESS (Mark is executing this phase).
+  - Phase 2: Component Extraction (Medium Risk, 7-9 hours) - Create reusable UI components.
+  - Phase 3: Feature Modules (High Risk, 11-14 hours) - Replace monolithic files with domain-driven feature modules.
+  - Phase 4: Page Controllers (Low Risk, 3-4 hours) - Create thin page orchestrators and update HTML templates.
+  - Phase 5: Documentation & Cleanup (Low Risk, 2.5 hours) - Document new architecture and delete obsolete files.
+  - Total Estimated Timeline: 25-35 hours.
+```
+
+**Benefits of Refactor:**
+
+```yaml
+Benefits:
+  - Developer Experience: Clearer boundaries, easier navigation, better testing, improved onboarding.
+  - Maintainability: Smaller, more focused files (largest ~300 lines vs. 1,185 currently), reduced coupling, enhanced reusability.
+  - Future-Proofing: Easier framework migration, isolated API changes, simplified feature additions.
+```
+
+**Dependency Flow Rules (Strict Layer Hierarchy):**
+
+```yaml
+Dependency Rules:
+  - Pages can import Features.
+  - Features can import Components.
+  - Components can import Services.
+  - Services can import Core.
+  - Upward imports and cross-layer imports (e.g., Pages -> Services directly) are NOT allowed to prevent circular dependencies.
+
+### Multi-Report Type Support (Future Enhancement)
+
+**Enabled By:** Frontend refactor (Phases 1-3 complete)
+
+**Capability:** The modular architecture now supports adding new CSV report types without modifying existing code.
+
+**Extension Pattern:**
+1. Backend: Extend `utils/report_type_detector.py` with new header patterns
+2. Service: Add processing methods to `services/reports.service.js`
+3. Feature: Create parallel processor module (e.g., `features/reports/publishing-processor.js`)
+4. UI: Define column config, reuse existing components (DataTable, Pagination, FilterBar)
+
+**Planned Report Types:**
+- **Publishing Reports** - Distribution channels, territories, release dates, platform-specific data
+- **Asset Conflict Reports** - Conflicting asset IDs, conflict types, priority levels, resolution status
+- **Additional types as business needs evolve**
+
+**Key Benefit:** Each new report type is an independent feature module. All UI components (table rendering, pagination, filtering, bulk operations) work automatically through generic component library.
+
+**Technical Foundation:** Generic DataTable component accepts column configuration - no hardcoded business logic. Report type detection pattern already established from asset-report implementation.
+
+**Status:** Architecture ready, awaiting business requirements for specific report types
+```
 
 ### Application Integration Strategy
 
